@@ -1,0 +1,14 @@
+{
+  "name": "vigora",
+  "private": true,
+  "version": "1.0.0",
+  "workspaces": [
+    "frontend",
+    "backend"
+  ],
+  "scripts": {
+    "dev:frontend": "npm run dev --workspace=frontend",
+    "dev:backend": "npm run start --workspace=backend",
+    "start:frontend": "npm run start --workspace=frontend"
+  }
+}

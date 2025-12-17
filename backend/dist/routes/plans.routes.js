@@ -1,0 +1,24 @@
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const authMiddleware_1 = __importDefault(require("../middleware/authMiddleware"));
+const plan_controller_1 = require("../controllers/plan.controller");
+const router = (0, express_1.Router)();
+router.use(authMiddleware_1.default);
+router.get('/plans', plan_controller_1.listPlans);
+router.post('/plans', plan_controller_1.createPlan);
+router.get('/plans/:id', plan_controller_1.getPlanById);
+router.patch('/plans/:id', plan_controller_1.updatePlan);
+router.delete('/plans/:id', plan_controller_1.deletePlan);
+router.get('/plans/:planId/sessions', plan_controller_1.listSessions);
+router.post('/plans/:planId/sessions', plan_controller_1.createSession);
+router.get('/sessions/:id', plan_controller_1.getSessionById);
+router.patch('/sessions/:id', plan_controller_1.updateSession);
+router.delete('/sessions/:id', plan_controller_1.deleteSession);
+router.get('/completion', plan_controller_1.listCompletion);
+router.post('/completion', plan_controller_1.upsertCompletion);
+router.delete('/completion/:id', plan_controller_1.deleteCompletion);
+exports.default = router;
