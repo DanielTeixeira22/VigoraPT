@@ -18,10 +18,13 @@ import {
   Textarea,
   useToast,
   HStack,
+  IconButton,
+  Icon,
 } from '@chakra-ui/react';
+import { FiChevronLeft, FiChevronRight } from 'react-icons/fi';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
-import { addDays, startOfWeek } from 'date-fns';
+import { addDays, startOfWeek, isSameDay, addWeeks } from 'date-fns';
 import { getMyClientProfile } from '../../services/clients';
 import { listPlans, listSessions, listCompletion, upsertCompletion } from '../../services/plans';
 import { uploadFile } from '../../services/uploads';
@@ -33,10 +36,18 @@ const TrainingCalendarPage = () => {
   const toast = useToast();
   const qc = useQueryClient();
   const [selectedPlan, setSelectedPlan] = useState<TrainingPlan | null>(null);
-  const [dayRange] = useState(() => {
-    const start = startOfWeek(new Date(), { weekStartsOn: 1 });
-    return Array.from({ length: 7 }, (_, i) => addDays(start, i));
-  });
+  const [weekOffset, setWeekOffset] = useState(0);
+  const today = useMemo(() => new Date(), []);
+
+  const dayRange = useMemo(() => {
+    const baseWeek = startOfWeek(new Date(), { weekStartsOn: 1 });
+    const targetWeek = weekOffset === 0 ? baseWeek : addWeeks(baseWeek, weekOffset);
+    return Array.from({ length: 7 }, (_, i) => addDays(targetWeek, i));
+  }, [weekOffset]);
+
+  const goToPrevWeek = () => setWeekOffset((o) => o - 1);
+  const goToNextWeek = () => setWeekOffset((o) => o + 1);
+  const goToCurrentWeek = () => setWeekOffset(0);
   const [reason, setReason] = useState('');
   const [file, setFile] = useState<File | null>(null);
   const [targetSession, setTargetSession] = useState<string | null>(null);
@@ -157,6 +168,38 @@ const TrainingCalendarPage = () => {
         }
       />
 
+      {/* Navegação entre semanas */}
+      <Flex justify="center" align="center" gap={4} mb={6}>
+        <IconButton
+          aria-label="Semana anterior"
+          icon={<Icon as={FiChevronLeft} boxSize={5} />}
+          onClick={goToPrevWeek}
+          variant="outline"
+          colorScheme="brand"
+          borderRadius="full"
+          size="sm"
+        />
+        <HStack spacing={3}>
+          <Text fontWeight={700} fontSize="md">
+            {formatDateTime(dayRange[0], 'dd MMM')} - {formatDateTime(dayRange[6], 'dd MMM yyyy')}
+          </Text>
+          {weekOffset !== 0 && (
+            <Button size="xs" variant="ghost" colorScheme="brand" onClick={goToCurrentWeek}>
+              Hoje
+            </Button>
+          )}
+        </HStack>
+        <IconButton
+          aria-label="Próxima semana"
+          icon={<Icon as={FiChevronRight} boxSize={5} />}
+          onClick={goToNextWeek}
+          variant="outline"
+          colorScheme="brand"
+          borderRadius="full"
+          size="sm"
+        />
+      </Flex>
+
       <Grid
         templateColumns={{
           base: '1fr',
@@ -170,23 +213,31 @@ const TrainingCalendarPage = () => {
         {dayRange.map((date) => {
           const sessionsForDay = (sessions ?? []).filter((s) => s.dayOfWeek === date.getDay());
           const hasSessions = sessionsForDay.length > 0;
+          const isToday = isSameDay(date, today);
           return (
             <GridItem key={date.toISOString()}>
               <Card
-                borderWidth="1px"
-                borderColor={hasSessions ? 'brand.200' : 'border'}
-                bg={hasSessions ? 'rgba(51,183,158,0.06)' : 'card'}
+                borderWidth={isToday ? '2px' : '1px'}
+                borderColor={isToday ? 'brand.500' : hasSessions ? 'brand.200' : 'border'}
+                bg={isToday ? 'rgba(51,183,158,0.12)' : hasSessions ? 'rgba(51,183,158,0.06)' : 'card'}
                 borderRadius="16px"
-                boxShadow="lg"
+                boxShadow={isToday ? '0 0 0 3px rgba(51,183,158,0.25), 0 4px 12px rgba(0,0,0,0.1)' : 'lg'}
                 transition="all 0.2s ease"
                 _hover={{ transform: 'translateY(-3px)', boxShadow: 'xl' }}
               >
                 <CardBody>
                   <Flex justify="space-between" align="center" mb={3}>
-                    <Text fontWeight={800} fontSize="lg">
-                      {weekdayLabels[date.getDay()]}
-                    </Text>
-                    <Text fontSize="sm" color="muted" fontWeight={600}>
+                    <HStack spacing={2}>
+                      <Text fontWeight={800} fontSize="lg">
+                        {weekdayLabels[date.getDay()]}
+                      </Text>
+                      {isToday && (
+                        <Badge colorScheme="brand" variant="solid" fontSize="xs" borderRadius="full">
+                          HOJE
+                        </Badge>
+                      )}
+                    </HStack>
+                    <Text fontSize="sm" color={isToday ? 'brand.600' : 'muted'} fontWeight={isToday ? 700 : 600}>
                       {formatDateTime(date, 'dd/MM')}
                     </Text>
                   </Flex>
@@ -197,7 +248,8 @@ const TrainingCalendarPage = () => {
                       borderColor="border"
                       borderRadius="12px"
                       p={4}
-                      bg="linear-gradient(135deg, rgba(255,255,255,0.7), rgba(245,247,251,0.7))"
+                      bg="whiteAlpha.300"
+                      _dark={{ bg: 'whiteAlpha.100' }}
                     >
                       <Text color="muted" fontWeight={600}>
                         Sem treino agendado.
@@ -270,14 +322,18 @@ const TrainingCalendarPage = () => {
                                 </Text>
                               )}
                               <Stack spacing={1}>
-                                {s.exercises.map((ex) => (
-                                  <HStack key={ex._id} align="flex-start" spacing={2}>
-                                    <Box w="8px" h="8px" borderRadius="full" bg="brand.400" mt={1} />
-                                    <Text fontSize="sm">
-                                      <strong>{ex.name}</strong> — {ex.sets}x{ex.reps}
-                                    </Text>
-                                  </HStack>
-                                ))}
+                                {s.exercises.map((ex, idx) => {
+                                  const bulletColors = ['brand.400', 'accent.500', 'purple.400', 'blue.400'];
+                                  const bulletColor = bulletColors[idx % bulletColors.length];
+                                  return (
+                                    <HStack key={ex._id} align="flex-start" spacing={2}>
+                                      <Box w="8px" h="8px" borderRadius="full" bg={bulletColor} mt={1} />
+                                      <Text fontSize="sm">
+                                        <strong>{ex.name}</strong> — {ex.sets}x{ex.reps}
+                                      </Text>
+                                    </HStack>
+                                  );
+                                })}
                               </Stack>
 
                               <Flex gap={2} mt={4} wrap="wrap" align="center">

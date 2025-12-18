@@ -3,9 +3,7 @@ import PrivateRoute from './PrivateRoute';
 import AppLayout from '../components/layout/AppLayout';
 
 // Pages
-
-import LoginPage from '../pages/LoginPage/LoginPage';
-import RegisterPage from '../pages/RegisterPage/RegisterPage';
+import AuthPage from '../pages/AuthPage/AuthPage';
 import DashboardPage from '../pages/DashboardPage/DashboardPage';
 import ProfilePage from '../pages/ProfilePage/ProfilePage';
 import PlansPage from '../pages/PlansPage/PlansPage';
@@ -19,9 +17,9 @@ import Homepage from '../pages/Homepage/Homepage';
 const AppRoutes = () => {
   return (
     <Routes>
-      {/* Public routes */}
-      <Route path="/login" element={<LoginPage />} />
-      <Route path="/register" element={<RegisterPage />} />
+      {/* Auth routes - login and register with sliding animation */}
+      <Route path="/login" element={<AuthPage />} />
+      <Route path="/register" element={<AuthPage />} />
 
       {/* Routes accessible to all authenticated users */}
       <Route

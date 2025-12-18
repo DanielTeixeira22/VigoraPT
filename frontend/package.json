@@ -7,7 +7,10 @@
         "start": "vite",
         "dev": "vite",
         "build": "tsc && vite build",
-        "preview": "vite preview"
+        "preview": "vite preview",
+        "test": "vitest run",
+        "test:watch": "vitest",
+        "test:ui": "vitest --ui"
     },
     "dependencies": {
         "@chakra-ui/react": "^2.8.2",
@@ -24,10 +27,16 @@
         "recharts": "^2.10.4"
     },
     "devDependencies": {
+        "@testing-library/jest-dom": "^6.9.1",
+        "@testing-library/react": "^16.3.1",
+        "@testing-library/user-event": "^14.6.1",
         "@types/react": "^18.2.47",
         "@types/react-dom": "^18.2.18",
         "@vitejs/plugin-react": "^4.2.1",
+        "@vitest/ui": "^4.0.16",
+        "jsdom": "^27.3.0",
         "typescript": "^5.3.3",
-        "vite": "^5.0.11"
+        "vite": "^5.0.11",
+        "vitest": "^4.0.16"
     }
 }

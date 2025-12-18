@@ -110,7 +110,7 @@ const Homepage: React.FC = () => {
                     <Tag bg="accent.500" color="white" borderRadius="full" px={3} py={1} fontWeight={700}>
                       VIGORA
                     </Tag>
-                    <Heading as="h1" size="2xl" lineHeight="short" fontWeight={800}>
+                    <Heading as="h1" size="2xl" lineHeight="short" fontWeight={800} color="white">
                       {s.title}
                     </Heading>
                     <Text fontSize="lg" maxW="2xl" opacity={0.95}>
