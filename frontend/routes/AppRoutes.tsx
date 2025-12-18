@@ -3,6 +3,7 @@ import PrivateRoute from './PrivateRoute';
 import AppLayout from '../components/layout/AppLayout';
 
 // Pages
+
 import LoginPage from '../pages/LoginPage/LoginPage';
 import RegisterPage from '../pages/RegisterPage/RegisterPage';
 import DashboardPage from '../pages/DashboardPage/DashboardPage';
@@ -13,6 +14,7 @@ import TrainerDirectoryPage from '../pages/TrainerDirectoryPage/TrainerDirectory
 import MyClientsPage from '../pages/MyClientsPage/MyClientsPage';
 import ChatPage from '../pages/ChatPage/ChatSPage';
 import AdminPage from '../pages/AdminPage/AdminPage';
+import Homepage from '../pages/Homepage/Homepage';
 
 const AppRoutes = () => {
   return (
@@ -71,9 +73,9 @@ const AppRoutes = () => {
         <Route path="/admin" element={<AdminPage />} />
       </Route>
 
-      {/* Default redirect */}
-      <Route path="/" element={<Navigate to="/dashboard" replace />} />
-      <Route path="*" element={<Navigate to="/dashboard" replace />} />
+      {/* Homepage como rota principal */}
+      <Route path="/" element={<Homepage />} />
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
 };
