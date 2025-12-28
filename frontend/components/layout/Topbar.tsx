@@ -19,7 +19,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { FiBell, FiCheck, FiExternalLink, FiLogOut, FiMoon, FiSun, FiUser } from 'react-icons/fi';
 import { useAuth } from '../../context/AuthContext';
 import { useThemeMode } from '../../context/ThemeContext';
-import { listNotifications, markNotificationRead } from '../../services/notifications';
+import { listNotifications, markNotificationRead, markAllNotificationsRead } from '../../services/notifications';
 import type { Notification } from '../../types/domain';
 
 const formatNotificationTime = (date?: string) => {
@@ -93,6 +93,13 @@ const Topbar = () => {
     },
   });
 
+  const markAllReadMutation = useMutation({
+    mutationFn: markAllNotificationsRead,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['notifications'] });
+    },
+  });
+
   const unreadCount = notifications.filter((n) => !n.isRead).length;
 
   return (
@@ -159,9 +166,22 @@ const Topbar = () => {
             <Box px={3} py={2}>
               <Flex justify="space-between" align="center">
                 <Text fontWeight={700}>Notificações</Text>
-                {unreadCount > 0 && (
-                  <Badge colorScheme="brand">{unreadCount} não lida{unreadCount > 1 ? 's' : ''}</Badge>
-                )}
+                <HStack spacing={2}>
+                  {unreadCount > 0 && (
+                    <Badge colorScheme="brand">{unreadCount} não lida{unreadCount > 1 ? 's' : ''}</Badge>
+                  )}
+                  {notifications.length > 0 && (
+                    <Button
+                      size="xs"
+                      variant="ghost"
+                      colorScheme="brand"
+                      onClick={() => markAllReadMutation.mutate()}
+                      isLoading={markAllReadMutation.isPending}
+                    >
+                      Limpar
+                    </Button>
+                  )}
+                </HStack>
               </Flex>
             </Box>
             <Divider />

@@ -21,9 +21,10 @@ import {
   IconButton,
   Icon,
 } from '@chakra-ui/react';
-import { FiChevronLeft, FiChevronRight } from 'react-icons/fi';
+import { FiChevronLeft, FiChevronRight, FiEye } from 'react-icons/fi';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { addDays, startOfWeek, isSameDay, addWeeks } from 'date-fns';
 import { getMyClientProfile } from '../../services/clients';
 import { listPlans, listSessions, listCompletion, upsertCompletion } from '../../services/plans';
@@ -33,6 +34,7 @@ import PageHeader from '../../components/ui/PageHeader';
 import { formatDateTime, normalizeDateOnly, weekdayLabels } from '../../utils/date';
 
 const TrainingCalendarPage = () => {
+  const navigate = useNavigate();
   const toast = useToast();
   const qc = useQueryClient();
   const [selectedPlan, setSelectedPlan] = useState<TrainingPlan | null>(null);
@@ -211,7 +213,25 @@ const TrainingCalendarPage = () => {
         gap={4}
       >
         {dayRange.map((date) => {
-          const sessionsForDay = (sessions ?? []).filter((s) => s.dayOfWeek === date.getDay());
+          // Filter sessions by day of week AND ensure date is within plan's date range
+          const sessionsForDay = (sessions ?? []).filter((s) => {
+            if (s.dayOfWeek !== date.getDay()) return false;
+            
+            // Check if date is within plan's startDate and endDate
+            if (activePlan?.startDate) {
+              const planStart = new Date(activePlan.startDate);
+              planStart.setHours(0, 0, 0, 0);
+              const checkDate = new Date(date);
+              checkDate.setHours(0, 0, 0, 0);
+              if (checkDate < planStart) return false;
+            }
+            if (activePlan?.endDate) {
+              const planEnd = new Date(activePlan.endDate);
+              planEnd.setHours(23, 59, 59, 999);
+              if (date > planEnd) return false;
+            }
+            return true;
+          });
           const hasSessions = sessionsForDay.length > 0;
           const isToday = isSameDay(date, today);
           return (
@@ -337,6 +357,18 @@ const TrainingCalendarPage = () => {
                               </Stack>
 
                               <Flex gap={2} mt={4} wrap="wrap" align="center">
+                                <Button
+                                  size="sm"
+                                  leftIcon={<FiEye />}
+                                  variant="outline"
+                                  colorScheme="brand"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    navigate(`/trainings/${s._id}`);
+                                  }}
+                                >
+                                  Ver detalhes
+                                </Button>
                                 {!isDone && !isFailed && (
                                   <>
                                     <Button

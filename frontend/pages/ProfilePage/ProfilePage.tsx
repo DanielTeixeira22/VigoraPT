@@ -7,22 +7,28 @@ import {
   Flex,
   FormControl,
   FormLabel,
-  Grid,
-  GridItem,
   Heading,
   HStack,
+  Icon,
   Input,
   Progress,
   Select,
   Stack,
+  Tab,
+  TabList,
+  TabPanel,
+  TabPanels,
+  Tabs,
   Text,
   Textarea,
   useToast,
+  VStack,
 } from '@chakra-ui/react';
+import { FiLock, FiSettings, FiUser } from 'react-icons/fi';
 import { QRCodeSVG } from 'qrcode.react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { useRef, useState } from 'react';
-import { changePassword, getMe, updateMe } from '../../services/users';
+import { changePassword, updateMe } from '../../services/users';
 import { qrGenerate } from '../../services/auth';
 import { uploadFile } from '../../services/uploads';
 import { getMyTrainerProfile, listPublicTrainers } from '../../services/trainers';
@@ -50,11 +56,6 @@ const ProfilePage = () => {
   const [qrToken, setQrToken] = useState<{ token: string; expiresAt: string } | null>(null);
   const [qrLoading, setQrLoading] = useState(false);
   const [changeRequest, setChangeRequest] = useState({ trainerId: '', reason: '' });
-
-  const { data: freshUser } = useQuery({
-    queryKey: ['me'],
-    queryFn: getMe,
-  });
 
   const { data: trainerProfile } = useQuery({
     queryKey: ['trainer', 'me'],
@@ -165,319 +166,357 @@ const ProfilePage = () => {
 
   return (
     <Box>
-      <PageHeader title="Perfil" subtitle="Dados pessoais, avatar e bio." />
+      <PageHeader title="Perfil" subtitle="Gere os teus dados pessoais, segurança e definições da conta." />
 
-      <Grid templateColumns={{ base: '1fr', lg: '2fr 1fr' }} gap={6}>
-        <GridItem>
-          <Card>
-            <CardBody>
-              <form
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  mutation.mutate(local);
-                }}
-              >
-                <Stack spacing={4}>
-                  {/* Avatar Upload */}
-                  <FormControl>
-                    <FormLabel>Avatar</FormLabel>
-                    <HStack spacing={4}>
-                      <Avatar
-                        size="xl"
-                        name={`${local.firstName} ${local.lastName}`}
-                        src={local.avatarUrl}
-                        bg="brand.400"
-                        color="white"
-                      />
-                      <Box>
-                        <Input
-                          type="file"
-                          accept="image/*"
-                          ref={fileInputRef}
-                          onChange={handleAvatarChange}
-                          display="none"
+      <Card>
+        <CardBody>
+          <Tabs colorScheme="brand" variant="enclosed" isLazy>
+            <TabList mb={4}>
+              <Tab>
+                <HStack spacing={2}>
+                  <Icon as={FiUser} />
+                  <Text>Dados Pessoais</Text>
+                </HStack>
+              </Tab>
+              <Tab>
+                <HStack spacing={2}>
+                  <Icon as={FiLock} />
+                  <Text>Segurança</Text>
+                </HStack>
+              </Tab>
+              <Tab>
+                <HStack spacing={2}>
+                  <Icon as={FiSettings} />
+                  <Text>Conta</Text>
+                </HStack>
+              </Tab>
+            </TabList>
+
+            <TabPanels>
+              {/* TAB 1: Dados Pessoais */}
+              <TabPanel px={0}>
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    mutation.mutate(local);
+                  }}
+                >
+                  <Stack spacing={5} maxW="600px">
+                    {/* Avatar Upload */}
+                    <FormControl>
+                      <FormLabel fontWeight={600}>Avatar</FormLabel>
+                      <HStack spacing={4}>
+                        <Avatar
+                          size="xl"
+                          name={`${local.firstName} ${local.lastName}`}
+                          src={local.avatarUrl}
+                          bg="brand.400"
+                          color="white"
                         />
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => fileInputRef.current?.click()}
-                          isLoading={avatarUploading}
-                          loadingText="A carregar..."
-                        >
-                          Escolher imagem
-                        </Button>
-                        {avatarUploading && (
-                          <Progress
-                            value={uploadProgress}
-                            size="xs"
-                            colorScheme="brand"
-                            mt={2}
-                            borderRadius="full"
+                        <Box>
+                          <Input
+                            type="file"
+                            accept="image/*"
+                            ref={fileInputRef}
+                            onChange={handleAvatarChange}
+                            display="none"
                           />
-                        )}
-                        <Text fontSize="xs" color="muted" mt={1}>
-                          JPG, PNG ou GIF (máx. 5MB)
-                        </Text>
-                      </Box>
-                    </HStack>
-                  </FormControl>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => fileInputRef.current?.click()}
+                            isLoading={avatarUploading}
+                            loadingText="A carregar..."
+                          >
+                            Escolher imagem
+                          </Button>
+                          {avatarUploading && (
+                            <Progress
+                              value={uploadProgress}
+                              size="xs"
+                              colorScheme="brand"
+                              mt={2}
+                              borderRadius="full"
+                            />
+                          )}
+                          <Text fontSize="xs" color="muted" mt={1}>
+                            JPG, PNG ou GIF (máx. 5MB)
+                          </Text>
+                        </Box>
+                      </HStack>
+                    </FormControl>
 
-                  <FormControl>
-                    <FormLabel>Email</FormLabel>
-                    <Input value={local.email} onChange={(e) => setLocal({ ...local, email: e.target.value })} />
-                  </FormControl>
-                  <FormControl>
-                    <FormLabel>Primeiro nome</FormLabel>
-                    <Input value={local.firstName} onChange={(e) => setLocal({ ...local, firstName: e.target.value })} />
-                  </FormControl>
-                  <FormControl>
-                    <FormLabel>Apelido</FormLabel>
-                    <Input value={local.lastName} onChange={(e) => setLocal({ ...local, lastName: e.target.value })} />
-                  </FormControl>
-                  <FormControl>
-                    <FormLabel>Bio</FormLabel>
-                    <Textarea value={local.bio} onChange={(e) => setLocal({ ...local, bio: e.target.value })} />
-                  </FormControl>
-                  <Button type="submit" isLoading={mutation.isPending}>
-                    Guardar
-                  </Button>
-                </Stack>
-              </form>
-            </CardBody>
-          </Card>
-        </GridItem>
-
-        <GridItem>
-          <Card>
-            <CardBody>
-              <Heading size="sm" mb={2}>
-                Estado da conta
-              </Heading>
-              <Text fontSize="sm" color="muted">
-                Role: {user?.role}
-              </Text>
-              <Text fontSize="sm" color="muted">
-                Username: {freshUser?.username}
-              </Text>
-              {user?.role === 'TRAINER' && (
-                <Box mt={3}>
-                  <Text fontWeight={700}>Perfil de treinador</Text>
-                  <Text fontSize="sm" color="muted">
-                    Validado: {trainerProfile?.validatedByAdmin ? 'Sim' : 'Não'}
-                  </Text>
-                  <Text fontSize="sm" color="muted">
-                    Especialidades: {trainerProfile?.specialties?.join(', ') || 'n/d'}
-                  </Text>
-                </Box>
-              )}
-              {user?.role === 'CLIENT' && (
-                <Box mt={3}>
-                  <Text fontWeight={700}>Perfil de cliente</Text>
-                  <Text fontSize="sm" color="muted">
-                    Objetivos: {clientProfile?.goals || 'n/d'}
-                  </Text>
-                  <Text fontSize="sm" color="muted">
-                    Preferências: {clientProfile?.preferences || 'n/d'}
-                  </Text>
-                  <Box mt={3} p={3} border="1px solid" borderColor="border" borderRadius="10px">
-                    <Text fontWeight={700}>Pedir alteração de treinador</Text>
-                    <Text fontSize="sm" color="muted">
-                      Escolhe um treinador validado e envia o pedido ao administrador.
-                    </Text>
-                    {(trainerOptions?.items?.length ?? 0) === 0 && (
-                      <Text fontSize="sm" color="orange.400" mt={1}>
-                        Ainda não há personal trainers validados disponíveis.
-                      </Text>
-                    )}
-                    {pendingRequest && (
-                      <Box mt={2} p={2} bg="yellow.50" _dark={{ bg: 'yellow.900' }} borderRadius="8px">
-                        <Text fontSize="sm" color="yellow.600" _dark={{ color: 'yellow.300' }}>
-                          ⏳ Já tens um pedido de mudança pendente. Aguarda a decisão do administrador.
-                        </Text>
-                      </Box>
-                    )}
-                    <Stack spacing={3} mt={2}>
-                      <FormControl isRequired>
-                        <FormLabel>Novo treinador</FormLabel>
-                        <Select
-                          placeholder="Seleciona"
-                          value={changeRequest.trainerId}
-                          onChange={(e) => setChangeRequest({ ...changeRequest, trainerId: e.target.value })}
-                          isDisabled={(trainerOptions?.items?.length ?? 0) === 0}
-                        >
-                          {(trainerOptions?.items ?? []).map((t) => {
-                            const userRef = t.userId as { profile?: { firstName?: string; lastName?: string }; username?: string } | string;
-                            const name =
-                              typeof userRef === 'object'
-                                ? `${userRef.profile?.firstName ?? ''} ${userRef.profile?.lastName ?? ''}`.trim() || userRef.username || 'Trainer'
-                                : userRef;
-                            return (
-                              <option key={t._id} value={t._id}>
-                                {name} {t.certification ? `· ${t.certification}` : ''}
-                              </option>
-                            );
-                          })}
-                        </Select>
+                    <FormControl>
+                      <FormLabel fontWeight={600}>Email</FormLabel>
+                      <Input value={local.email} onChange={(e) => setLocal({ ...local, email: e.target.value })} />
+                    </FormControl>
+                    <HStack spacing={4}>
+                      <FormControl>
+                        <FormLabel fontWeight={600}>Primeiro nome</FormLabel>
+                        <Input value={local.firstName} onChange={(e) => setLocal({ ...local, firstName: e.target.value })} />
                       </FormControl>
                       <FormControl>
-                        <FormLabel>Motivo</FormLabel>
-                        <Textarea
-                          value={changeRequest.reason}
-                          onChange={(e) => setChangeRequest({ ...changeRequest, reason: e.target.value })}
+                        <FormLabel fontWeight={600}>Apelido</FormLabel>
+                        <Input value={local.lastName} onChange={(e) => setLocal({ ...local, lastName: e.target.value })} />
+                      </FormControl>
+                    </HStack>
+                    <FormControl>
+                      <FormLabel fontWeight={600}>Bio</FormLabel>
+                      <Textarea value={local.bio} onChange={(e) => setLocal({ ...local, bio: e.target.value })} rows={4} />
+                    </FormControl>
+                    <Button type="submit" colorScheme="brand" size="lg" isLoading={mutation.isPending}>
+                      Guardar alterações
+                    </Button>
+                  </Stack>
+                </form>
+              </TabPanel>
+
+              {/* TAB 2: Segurança */}
+              <TabPanel px={0}>
+                <Stack spacing={6} maxW="500px">
+                  {/* Password Change */}
+                  <Box p={5} border="1px solid" borderColor="border" borderRadius="12px">
+                    <Heading size="sm" mb={4}>🔑 Alteração de password</Heading>
+                    <Stack spacing={4}>
+                      <FormControl isRequired>
+                        <FormLabel fontWeight={600}>Password atual</FormLabel>
+                        <Input
+                          type="password"
+                          value={passwords.current}
+                          onChange={(e) => setPasswords({ ...passwords, current: e.target.value })}
+                        />
+                      </FormControl>
+                      <FormControl isRequired>
+                        <FormLabel fontWeight={600}>Nova password</FormLabel>
+                        <Input
+                          type="password"
+                          value={passwords.next}
+                          onChange={(e) => setPasswords({ ...passwords, next: e.target.value })}
                         />
                       </FormControl>
                       <Button
-                        size="sm"
-                        onClick={() =>
-                          changeTrainerMutation.mutate({
-                            requestedTrainerId: changeRequest.trainerId,
-                            reason: changeRequest.reason || undefined,
-                          })
-                        }
-                        isDisabled={!changeRequest.trainerId || (trainerOptions?.items?.length ?? 0) === 0 || !!pendingRequest}
-                        isLoading={changeTrainerMutation.isPending}
+                        colorScheme="brand"
+                        onClick={() => passwordMutation.mutate()}
+                        isLoading={passwordMutation.isPending}
+                        isDisabled={!passwords.current || !passwords.next}
                       >
-                        Enviar pedido
+                        Atualizar password
                       </Button>
                     </Stack>
                   </Box>
-                </Box>
-              )}
-              <Box mt={4} p={3} border="1px dashed" borderColor="border" borderRadius="10px">
-                <Text fontWeight={700}>Alteração de password</Text>
-                <Stack spacing={3} mt={2}>
-                  <FormControl isRequired>
-                    <FormLabel>Password atual</FormLabel>
-                    <Input
-                      type="password"
-                      value={passwords.current}
-                      onChange={(e) => setPasswords({ ...passwords, current: e.target.value })}
-                    />
-                  </FormControl>
-                  <FormControl isRequired>
-                    <FormLabel>Nova password</FormLabel>
-                    <Input
-                      type="password"
-                      value={passwords.next}
-                      onChange={(e) => setPasswords({ ...passwords, next: e.target.value })}
-                    />
-                  </FormControl>
-                  <Button
-                    size="sm"
-                    onClick={() => passwordMutation.mutate()}
-                    isLoading={passwordMutation.isPending}
-                    isDisabled={!passwords.current || !passwords.next}
-                  >
-                    Atualizar password
-                  </Button>
-                </Stack>
-              </Box>
 
-              {/* QR Code para Login */}
-              <Box 
-                mt={4} 
-                p={5} 
-                borderRadius="16px" 
-                bgGradient="linear(to-br, brand.50, teal.50)"
-                _dark={{ bgGradient: 'linear(to-br, gray.800, gray.700)', borderColor: 'brand.700' }}
-                border="1px solid"
-                borderColor="brand.200"
-              >
-                <Flex align="center" gap={3} mb={4}>
+                  {/* QR Code para Login */}
                   <Box 
-                    bg="brand.500" 
-                    color="white" 
-                    p={2} 
-                    borderRadius="10px"
-                    fontSize="xl"
+                    p={5} 
+                    borderRadius="16px" 
+                    bgGradient="linear(to-br, brand.50, teal.50)"
+                    _dark={{ bgGradient: 'linear(to-br, gray.800, gray.700)', borderColor: 'brand.700' }}
+                    border="1px solid"
+                    borderColor="brand.200"
                   >
-                    📱
-                  </Box>
-                  <Box flex={1}>
-                    <Text fontWeight={700} fontSize="md" color="gray.800" _dark={{ color: 'white' }}>
-                      Login via QR Code
-                    </Text>
-                    <Text fontSize="sm" color="gray.600" _dark={{ color: 'gray.400' }}>
-                      Gera um código para fazeres login noutro dispositivo
-                    </Text>
-                  </Box>
-                </Flex>
+                    <Flex align="center" gap={3} mb={4}>
+                      <Box 
+                        bg="brand.500" 
+                        color="white" 
+                        p={2} 
+                        borderRadius="10px"
+                        display="flex"
+                        alignItems="center"
+                        justifyContent="center"
+                      >
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <rect x="3" y="3" width="7" height="7" rx="1" stroke="currentColor" strokeWidth="2"/>
+                          <rect x="5" y="5" width="3" height="3" fill="currentColor"/>
+                          <rect x="14" y="3" width="7" height="7" rx="1" stroke="currentColor" strokeWidth="2"/>
+                          <rect x="16" y="5" width="3" height="3" fill="currentColor"/>
+                          <rect x="3" y="14" width="7" height="7" rx="1" stroke="currentColor" strokeWidth="2"/>
+                          <rect x="5" y="16" width="3" height="3" fill="currentColor"/>
+                          <rect x="14" y="14" width="3" height="3" fill="currentColor"/>
+                          <rect x="17" y="17" width="4" height="4" fill="currentColor"/>
+                          <rect x="14" y="19" width="2" height="2" fill="currentColor"/>
+                        </svg>
+                      </Box>
+                      <Box flex={1}>
+                        <Text fontWeight={700} fontSize="md" color="gray.800" _dark={{ color: 'white' }}>
+                          Login via QR Code
+                        </Text>
+                        <Text fontSize="sm" color="gray.600" _dark={{ color: 'gray.400' }}>
+                          Gera um código para fazeres login noutro dispositivo
+                        </Text>
+                      </Box>
+                    </Flex>
 
-                {!qrToken ? (
-                  <Button
-                    w="100%"
-                    colorScheme="brand"
-                    size="lg"
-                    isLoading={qrLoading}
-                    loadingText="A gerar..."
-                    onClick={async () => {
-                      setQrLoading(true);
-                      try {
-                        const res = await qrGenerate();
-                        setQrToken(res);
-                        toast({ title: 'QR Code gerado!', description: 'Escaneia com a câmara na página de login.', status: 'success' });
-                      } catch {
-                        toast({ title: 'Erro ao gerar QR', description: 'Tenta novamente.', status: 'error' });
-                      } finally {
-                        setQrLoading(false);
-                      }
-                    }}
-                  >
-                    🔐 Gerar QR Code
-                  </Button>
-                ) : (
-                  <Flex direction="column" align="center">
-                    <Box 
-                      p={4} 
-                      bg="white" 
-                      borderRadius="16px" 
-                      boxShadow="lg"
-                      border="3px solid"
-                      borderColor="brand.400"
-                    >
-                      <QRCodeSVG 
-                        value={qrToken.token} 
-                        size={200} 
-                        level="H"
-                        includeMargin
-                      />
+                    {!qrToken ? (
+                      <Button
+                        w="100%"
+                        colorScheme="brand"
+                        size="lg"
+                        isLoading={qrLoading}
+                        loadingText="A gerar..."
+                        onClick={async () => {
+                          setQrLoading(true);
+                          try {
+                            const res = await qrGenerate();
+                            setQrToken(res);
+                            toast({ title: 'QR Code gerado!', description: 'Escaneia com a câmara na página de login.', status: 'success' });
+                          } catch {
+                            toast({ title: 'Erro ao gerar QR', description: 'Tenta novamente.', status: 'error' });
+                          } finally {
+                            setQrLoading(false);
+                          }
+                        }}
+                      >
+                        Gerar QR Code
+                      </Button>
+                    ) : (
+                      <Flex direction="column" align="center">
+                        <Box 
+                          p={4} 
+                          bg="white" 
+                          borderRadius="16px" 
+                          boxShadow="lg"
+                          border="3px solid"
+                          borderColor="brand.400"
+                        >
+                          <QRCodeSVG 
+                            value={qrToken.token} 
+                            size={200} 
+                            level="H"
+                            includeMargin
+                          />
+                        </Box>
+                        <Stack spacing={1} mt={4} align="center">
+                          <Text fontSize="sm" fontWeight={600} color="brand.600" _dark={{ color: 'brand.300' }}>
+                            ⏱️ Expira às {new Date(qrToken.expiresAt).toLocaleTimeString()}
+                          </Text>
+                          <Text fontSize="xs" color="gray.500" textAlign="center">
+                            Aponta a câmara para este código na página de login
+                          </Text>
+                        </Stack>
+                        <Button
+                          mt={4}
+                          size="sm"
+                          variant="outline"
+                          colorScheme="brand"
+                          isLoading={qrLoading}
+                          onClick={async () => {
+                            setQrLoading(true);
+                            try {
+                              const res = await qrGenerate();
+                              setQrToken(res);
+                              toast({ title: 'Novo QR Code gerado!', status: 'success' });
+                            } catch {
+                              toast({ title: 'Erro ao gerar QR', status: 'error' });
+                            } finally {
+                              setQrLoading(false);
+                            }
+                          }}
+                        >
+                          🔄 Regenerar QR Code
+                        </Button>
+                      </Flex>
+                    )}
+                  </Box>
+                </Stack>
+              </TabPanel>
+
+              {/* TAB 3: Conta */}
+              <TabPanel px={0}>
+                <Stack spacing={6} maxW="600px">
+                  {/* Perfil de Trainer */}
+                  {user?.role === 'TRAINER' && (
+                    <Box p={5} border="1px solid" borderColor="brand.200" borderRadius="12px" bg="brand.50" _dark={{ bg: 'gray.800' }}>
+                      <Heading size="sm" mb={3}>🏋️ Perfil de Treinador</Heading>
+                      <VStack align="start" spacing={2}>
+                        <HStack>
+                          <Text fontWeight={600} w="120px">Validado:</Text>
+                          <Text color={trainerProfile?.validatedByAdmin ? 'green.500' : 'orange.500'}>
+                            {trainerProfile?.validatedByAdmin ? '✓ Sim' : '⏳ Não'}
+                          </Text>
+                        </HStack>
+                        <HStack align="start">
+                          <Text fontWeight={600} w="120px">Especialidades:</Text>
+                          <Text color="muted">{trainerProfile?.specialties?.join(', ') || 'n/d'}</Text>
+                        </HStack>
+                      </VStack>
                     </Box>
-                    <Stack spacing={1} mt={4} align="center">
-                      <Text fontSize="sm" fontWeight={600} color="brand.600" _dark={{ color: 'brand.300' }}>
-                        ⏱️ Expira às {new Date(qrToken.expiresAt).toLocaleTimeString()}
-                      </Text>
-                      <Text fontSize="xs" color="gray.500" textAlign="center">
-                        Aponta a câmara para este código na página de login
-                      </Text>
-                    </Stack>
-                    <Button
-                      mt={4}
-                      size="sm"
-                      variant="outline"
-                      colorScheme="brand"
-                      isLoading={qrLoading}
-                      onClick={async () => {
-                        setQrLoading(true);
-                        try {
-                          const res = await qrGenerate();
-                          setQrToken(res);
-                          toast({ title: 'Novo QR Code gerado!', status: 'success' });
-                        } catch {
-                          toast({ title: 'Erro ao gerar QR', status: 'error' });
-                        } finally {
-                          setQrLoading(false);
-                        }
-                      }}
-                    >
-                      🔄 Regenerar QR Code
-                    </Button>
-                  </Flex>
-                )}
-              </Box>
-            </CardBody>
-          </Card>
-        </GridItem>
-      </Grid>
+                  )}
+
+                  {/* Pedir alteração de treinador (apenas para clientes) */}
+                  {user?.role === 'CLIENT' && (
+                      <Box p={5} border="1px solid" borderColor="border" borderRadius="12px">
+                        <Heading size="sm" mb={2}>🔄 Pedir alteração de treinador</Heading>
+                        <Text fontSize="sm" color="muted" mb={4}>
+                          Escolhe um treinador validado e envia o pedido ao administrador.
+                        </Text>
+
+                        {(trainerOptions?.items?.length ?? 0) === 0 && (
+                          <Text fontSize="sm" color="orange.400" mb={3}>
+                            Ainda não há personal trainers validados disponíveis.
+                          </Text>
+                        )}
+
+                        {pendingRequest && (
+                          <Box mb={4} p={3} bg="yellow.50" _dark={{ bg: 'yellow.900' }} borderRadius="8px">
+                            <Text fontSize="sm" color="yellow.600" _dark={{ color: 'yellow.300' }}>
+                              ⏳ Já tens um pedido de mudança pendente. Aguarda a decisão do administrador.
+                            </Text>
+                          </Box>
+                        )}
+
+                        <Stack spacing={4}>
+                          <FormControl isRequired>
+                            <FormLabel fontWeight={600}>Novo treinador</FormLabel>
+                            <Select
+                              placeholder="Seleciona"
+                              value={changeRequest.trainerId}
+                              onChange={(e) => setChangeRequest({ ...changeRequest, trainerId: e.target.value })}
+                              isDisabled={(trainerOptions?.items?.length ?? 0) === 0 || !!pendingRequest}
+                            >
+                              {(trainerOptions?.items ?? []).map((t) => {
+                                const userRef = t.userId as { profile?: { firstName?: string; lastName?: string }; username?: string } | string;
+                                const name =
+                                  typeof userRef === 'object'
+                                    ? `${userRef.profile?.firstName ?? ''} ${userRef.profile?.lastName ?? ''}`.trim() || userRef.username || 'Trainer'
+                                    : userRef;
+                                return (
+                                  <option key={t._id} value={t._id}>
+                                    {name} {t.certification ? `· ${t.certification}` : ''}
+                                  </option>
+                                );
+                              })}
+                            </Select>
+                          </FormControl>
+                          <FormControl>
+                            <FormLabel fontWeight={600}>Motivo (opcional)</FormLabel>
+                            <Textarea
+                              value={changeRequest.reason}
+                              onChange={(e) => setChangeRequest({ ...changeRequest, reason: e.target.value })}
+                              isDisabled={!!pendingRequest}
+                            />
+                          </FormControl>
+                          <Button
+                            colorScheme="brand"
+                            onClick={() =>
+                              changeTrainerMutation.mutate({
+                                requestedTrainerId: changeRequest.trainerId,
+                                reason: changeRequest.reason || undefined,
+                              })
+                            }
+                            isDisabled={!changeRequest.trainerId || (trainerOptions?.items?.length ?? 0) === 0 || !!pendingRequest}
+                            isLoading={changeTrainerMutation.isPending}
+                          >
+                            Enviar pedido
+                          </Button>
+                        </Stack>
+                      </Box>
+                  )}
+                </Stack>
+              </TabPanel>
+            </TabPanels>
+          </Tabs>
+        </CardBody>
+      </Card>
     </Box>
   );
 };

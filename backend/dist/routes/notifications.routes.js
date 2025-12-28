@@ -11,6 +11,8 @@ const router = (0, express_1.Router)();
 router.use(authMiddleware_1.default);
 // GET /api/notifications?onlyUnread=true
 router.get('/', notification_controller_1.listMyNotifications);
+// POST /api/notifications/read-all (MUST be before /:id/read to match correctly)
+router.post('/read-all', notification_controller_1.markAllNotificationsRead);
 // POST /api/notifications/:id/read
 router.post('/:id/read', notification_controller_1.markNotificationRead);
 // POST /api/notifications/alert

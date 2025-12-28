@@ -14,6 +14,8 @@ import ChatPage from '../pages/ChatPage/ChatSPage';
 import AdminPage from '../pages/AdminPage/AdminPage';
 import Homepage from '../pages/Homepage/Homepage';
 
+import SessionDetailsPage from '../pages/SessionDetailsPage/SessionDetailsPage';
+
 const AppRoutes = () => {
   return (
     <Routes>
@@ -58,6 +60,7 @@ const AppRoutes = () => {
       >
         <Route path="/calendar" element={<TrainingCalendarPage />} />
         <Route path="/trainings" element={<TrainingCalendarPage />} />
+        <Route path="/trainings/:sessionId" element={<SessionDetailsPage />} />
       </Route>
 
       {/* Admin route with AppLayout */}

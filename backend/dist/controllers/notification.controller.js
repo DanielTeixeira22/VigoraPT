@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.sendAlertToClient = exports.markNotificationRead = exports.listMyNotifications = void 0;
+exports.sendAlertToClient = exports.markAllNotificationsRead = exports.markNotificationRead = exports.listMyNotifications = void 0;
 const Notification_1 = __importDefault(require("../models/Notification"));
 const ClientProfile_1 = __importDefault(require("../models/ClientProfile"));
 const TrainerProfile_1 = __importDefault(require("../models/TrainerProfile"));
@@ -40,6 +40,18 @@ const markNotificationRead = async (req, res, next) => {
     }
 };
 exports.markNotificationRead = markNotificationRead;
+const markAllNotificationsRead = async (req, res, next) => {
+    try {
+        if (!req.user)
+            return res.status(401).json({ message: 'Não autenticado.' });
+        const result = await Notification_1.default.updateMany({ recipientId: req.user._id, isRead: false }, { $set: { isRead: true } });
+        res.json({ message: 'Todas as notificações foram marcadas como lidas.', modifiedCount: result.modifiedCount });
+    }
+    catch (err) {
+        next(err);
+    }
+};
+exports.markAllNotificationsRead = markAllNotificationsRead;
 const sendAlertToClient = async (req, res, next) => {
     try {
         if (!req.user)

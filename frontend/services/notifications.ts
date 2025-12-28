@@ -11,6 +11,11 @@ export const markNotificationRead = async (id: string): Promise<Notification> =>
   return data;
 };
 
+export const markAllNotificationsRead = async (): Promise<{ message: string; modifiedCount: number }> => {
+  const { data } = await api.post<{ message: string; modifiedCount: number }>('/notifications/read-all', {});
+  return data;
+};
+
 export const sendAlert = async (payload: { clientId: string; message?: string }) => {
   const { data } = await api.post<Notification>('/notifications/alerts', payload);
   return data;

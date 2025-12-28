@@ -42,6 +42,21 @@ export const markNotificationRead = async (req: Request<{ id: string }>, res: Re
   }
 };
 
+export const markAllNotificationsRead = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    if (!req.user) return res.status(401).json({ message: 'Não autenticado.' });
+
+    const result = await Notification.updateMany(
+      { recipientId: req.user._id, isRead: false },
+      { $set: { isRead: true } }
+    );
+
+    res.json({ message: 'Todas as notificações foram marcadas como lidas.', modifiedCount: result.modifiedCount });
+  } catch (err) {
+    next(err);
+  }
+};
+
 export const sendAlertToClient = async (req: Request, res: Response, next: NextFunction) => {
   try {
     if (!req.user) return res.status(401).json({ message: 'Não autenticado.' });
