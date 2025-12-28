@@ -4,6 +4,7 @@ import {
   Button,
   Card,
   CardBody,
+  Flex,
   FormControl,
   FormLabel,
   Grid,
@@ -18,9 +19,11 @@ import {
   Textarea,
   useToast,
 } from '@chakra-ui/react';
+import { QRCodeSVG } from 'qrcode.react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { useRef, useState } from 'react';
 import { changePassword, getMe, updateMe } from '../../services/users';
+import { qrGenerate } from '../../services/auth';
 import { uploadFile } from '../../services/uploads';
 import { getMyTrainerProfile, listPublicTrainers } from '../../services/trainers';
 import { getMyClientProfile } from '../../services/clients';
@@ -44,6 +47,8 @@ const ProfilePage = () => {
     bio: user?.profile.bio ?? '',
   });
   const [passwords, setPasswords] = useState({ current: '', next: '' });
+  const [qrToken, setQrToken] = useState<{ token: string; expiresAt: string } | null>(null);
+  const [qrLoading, setQrLoading] = useState(false);
   const [changeRequest, setChangeRequest] = useState({ trainerId: '', reason: '' });
 
   const { data: freshUser } = useQuery({
@@ -366,6 +371,108 @@ const ProfilePage = () => {
                     Atualizar password
                   </Button>
                 </Stack>
+              </Box>
+
+              {/* QR Code para Login */}
+              <Box 
+                mt={4} 
+                p={5} 
+                borderRadius="16px" 
+                bgGradient="linear(to-br, brand.50, teal.50)"
+                _dark={{ bgGradient: 'linear(to-br, gray.800, gray.700)', borderColor: 'brand.700' }}
+                border="1px solid"
+                borderColor="brand.200"
+              >
+                <Flex align="center" gap={3} mb={4}>
+                  <Box 
+                    bg="brand.500" 
+                    color="white" 
+                    p={2} 
+                    borderRadius="10px"
+                    fontSize="xl"
+                  >
+                    📱
+                  </Box>
+                  <Box flex={1}>
+                    <Text fontWeight={700} fontSize="md" color="gray.800" _dark={{ color: 'white' }}>
+                      Login via QR Code
+                    </Text>
+                    <Text fontSize="sm" color="gray.600" _dark={{ color: 'gray.400' }}>
+                      Gera um código para fazeres login noutro dispositivo
+                    </Text>
+                  </Box>
+                </Flex>
+
+                {!qrToken ? (
+                  <Button
+                    w="100%"
+                    colorScheme="brand"
+                    size="lg"
+                    isLoading={qrLoading}
+                    loadingText="A gerar..."
+                    onClick={async () => {
+                      setQrLoading(true);
+                      try {
+                        const res = await qrGenerate();
+                        setQrToken(res);
+                        toast({ title: 'QR Code gerado!', description: 'Escaneia com a câmara na página de login.', status: 'success' });
+                      } catch {
+                        toast({ title: 'Erro ao gerar QR', description: 'Tenta novamente.', status: 'error' });
+                      } finally {
+                        setQrLoading(false);
+                      }
+                    }}
+                  >
+                    🔐 Gerar QR Code
+                  </Button>
+                ) : (
+                  <Flex direction="column" align="center">
+                    <Box 
+                      p={4} 
+                      bg="white" 
+                      borderRadius="16px" 
+                      boxShadow="lg"
+                      border="3px solid"
+                      borderColor="brand.400"
+                    >
+                      <QRCodeSVG 
+                        value={qrToken.token} 
+                        size={200} 
+                        level="H"
+                        includeMargin
+                      />
+                    </Box>
+                    <Stack spacing={1} mt={4} align="center">
+                      <Text fontSize="sm" fontWeight={600} color="brand.600" _dark={{ color: 'brand.300' }}>
+                        ⏱️ Expira às {new Date(qrToken.expiresAt).toLocaleTimeString()}
+                      </Text>
+                      <Text fontSize="xs" color="gray.500" textAlign="center">
+                        Aponta a câmara para este código na página de login
+                      </Text>
+                    </Stack>
+                    <Button
+                      mt={4}
+                      size="sm"
+                      variant="outline"
+                      colorScheme="brand"
+                      isLoading={qrLoading}
+                      onClick={async () => {
+                        setQrLoading(true);
+                        try {
+                          const res = await qrGenerate();
+                          setQrToken(res);
+                          toast({ title: 'Novo QR Code gerado!', status: 'success' });
+                        } catch {
+                          toast({ title: 'Erro ao gerar QR', status: 'error' });
+                        } finally {
+                          setQrLoading(false);
+                        }
+                      }}
+                    >
+                      🔄 Regenerar QR Code
+                    </Button>
+                  </Flex>
+                )}
               </Box>
             </CardBody>
           </Card>

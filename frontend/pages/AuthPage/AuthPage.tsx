@@ -8,17 +8,24 @@ import {
   FormLabel,
   Heading,
   Input,
+  Modal,
+  ModalBody,
+  ModalCloseButton,
+  ModalContent,
+  ModalHeader,
+  ModalOverlay,
   Stack,
   Text,
+  useDisclosure,
   useToast,
 } from '@chakra-ui/react';
 import type { FormEvent } from 'react';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { AxiosError } from 'axios';
-import { qrPoll, qrStart } from '../../services/auth';
+import { Html5Qrcode } from 'html5-qrcode';
+import { qrScanLogin } from '../../services/auth';
 import { useAuth } from '../../context/AuthContext';
-import type { User } from '../../types/domain';
 
 // Imagens do slideshow
 const SLIDE_IMAGES = [
@@ -42,9 +49,11 @@ const AuthPage = () => {
   const [loginPassword, setLoginPassword] = useState('');
   const [loginLoading, setLoginLoading] = useState(false);
 
-  // QR state
-  const [qrCode, setQrCode] = useState<string | null>(null);
-  const [qrExpires, setQrExpires] = useState<string | null>(null);
+  // QR Scanner state
+  const { isOpen: isQrModalOpen, onOpen: openQrModal, onClose: closeQrModal } = useDisclosure();
+  const [scannerActive, setScannerActive] = useState(false);
+  const scannerRef = useRef<Html5Qrcode | null>(null);
+  const scannerContainerId = 'qr-reader';
 
   // Register state
   const [registerForm, setRegisterForm] = useState({
@@ -82,39 +91,6 @@ const AuthPage = () => {
     }
   }, [isRegisterMode, location.pathname, navigate]);
 
-  // QR polling
-  type QrPollResult = {
-    status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'EXPIRED';
-    user?: User;
-    accessToken?: string;
-    refreshToken?: string;
-  };
-
-  useEffect(() => {
-    let interval: number | undefined;
-    if (qrCode) {
-      interval = window.setInterval(async () => {
-        try {
-          const res: QrPollResult = await qrPoll(qrCode);
-          if (res && res.status === 'APPROVED' && res.user && res.accessToken && res.refreshToken) {
-            toast({ title: 'Login via QR aprovado!', status: 'success' });
-            applyAuthResponse({
-              user: res.user,
-              accessToken: res.accessToken,
-              refreshToken: res.refreshToken,
-            });
-            navigate('/dashboard', { replace: true });
-          }
-        } catch (err) {
-          console.warn('Poll QR falhou', err);
-        }
-      }, 3000);
-    }
-    return () => {
-      if (interval) window.clearInterval(interval);
-    };
-  }, [applyAuthResponse, navigate, qrCode, toast]);
-
   const handleLogin = async (e: FormEvent) => {
     e.preventDefault();
     setLoginLoading(true);
@@ -128,20 +104,106 @@ const AuthPage = () => {
     }
   };
 
-  const handleStartQr = async () => {
-    try {
-      const res = await qrStart();
-      setQrCode(res.code);
-      setQrExpires(res.expiresAt);
-      toast({
-        title: 'QR code gerado',
-        description: 'Abre a app móvel (ou outra sessão) para aprovar.',
-        status: 'info',
-      });
-    } catch {
-      toast({ title: 'Não foi possível gerar QR', status: 'error' });
+  // QR Code Scanner handlers
+  const stopScanner = useCallback(async () => {
+    if (scannerRef.current) {
+      try {
+        const state = scannerRef.current.getState();
+        // Só para se estiver realmente a correr (state 2 = scanning)
+        if (state === 2) {
+          await scannerRef.current.stop();
+        }
+        scannerRef.current.clear();
+      } catch (err) {
+        // Ignorar erros silenciosamente
+        console.debug('Scanner cleanup:', err);
+      }
+      scannerRef.current = null;
+      setScannerActive(false);
     }
-  };
+  }, []);
+
+  const startScanner = useCallback(async () => {
+    if (scannerActive || scannerRef.current) return;
+    
+    try {
+      const html5QrCode = new Html5Qrcode(scannerContainerId);
+      scannerRef.current = html5QrCode;
+      
+      await html5QrCode.start(
+        { facingMode: 'environment' },
+        {
+          fps: 10,
+          qrbox: { width: 250, height: 250 },
+        },
+        async (decodedText) => {
+          // QR Code detetado! Parar scanner primeiro
+          try {
+            const state = html5QrCode.getState();
+            if (state === 2) {
+              await html5QrCode.stop();
+            }
+            html5QrCode.clear();
+          } catch {
+            // Ignorar
+          }
+          scannerRef.current = null;
+          setScannerActive(false);
+          closeQrModal();
+          
+          try {
+            toast({ title: 'QR Code detetado!', description: 'A processar login...', status: 'info' });
+            const res = await qrScanLogin(decodedText);
+            applyAuthResponse(res);
+            toast({ title: 'Login efetuado com sucesso!', status: 'success' });
+            navigate('/dashboard', { replace: true });
+          } catch (err) {
+            const message = err instanceof AxiosError && err.response?.data?.message
+              ? err.response.data.message
+              : 'QR Code inválido ou expirado.';
+            toast({ title: 'Erro no login', description: message, status: 'error' });
+          }
+        },
+        () => {
+          // QR Code não detetado - silencioso
+        }
+      );
+      setScannerActive(true);
+    } catch (err) {
+      console.error('Erro ao iniciar scanner:', err);
+      toast({ title: 'Erro ao aceder à câmara', description: 'Verifica as permissões do browser.', status: 'error' });
+    }
+  }, [applyAuthResponse, closeQrModal, navigate, scannerActive, toast]);
+
+  // Start scanner when modal opens
+  useEffect(() => {
+    if (isQrModalOpen) {
+      // Pequeno delay para o DOM estar pronto
+      const timer = setTimeout(() => {
+        startScanner();
+      }, 300);
+      return () => clearTimeout(timer);
+    } else {
+      stopScanner();
+    }
+  }, [isQrModalOpen, startScanner, stopScanner]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (scannerRef.current) {
+        try {
+          const state = scannerRef.current.getState();
+          if (state === 2) {
+            scannerRef.current.stop().catch(() => {});
+          }
+          scannerRef.current.clear();
+        } catch {
+          // Ignorar
+        }
+      }
+    };
+  }, []);
 
   const handleRegister = async (e: FormEvent) => {
     e.preventDefault();
@@ -300,28 +362,43 @@ const AuthPage = () => {
             <Divider />
           </Flex>
 
-          <Box bg="card" border="1px dashed" borderColor="border" borderRadius="12px" p={4} mb={4}>
+          <Box bg="card" border="1px solid" borderColor="brand.200" borderRadius="12px" p={4} mb={4} _dark={{ borderColor: 'brand.700' }}>
             <Flex align="center" justify="space-between" gap={3}>
               <Box>
-                <Text fontWeight={700}>Login por QR Code</Text>
+                <Text fontWeight={700} color="brand.600" _dark={{ color: 'brand.300' }}>Login por QR Code</Text>
                 <Text fontSize="sm" color="muted">
-                  Gera um QR para ser aprovado noutra sessão.
+                  Escaneia o QR Code gerado no teu perfil.
                 </Text>
               </Box>
-              <Button variant="outline" size="sm" onClick={handleStartQr}>Gerar QR</Button>
+              <Button colorScheme="brand" size="sm" onClick={openQrModal}>Escanear QR</Button>
             </Flex>
-            {qrCode && (
-              <Box mt={3} p={3} borderRadius="10px" bg="gray.50" _dark={{ bg: 'gray.800' }}>
-                <Text fontSize="sm" color="muted">Código:</Text>
-                <Text fontFamily="mono" fontWeight="bold">{qrCode}</Text>
-                {qrExpires && (
-                  <Text fontSize="xs" color="muted">
-                    Expira: {new Date(qrExpires).toLocaleTimeString()}
-                  </Text>
-                )}
-              </Box>
-            )}
           </Box>
+
+          {/* Modal do Scanner QR */}
+          <Modal isOpen={isQrModalOpen} onClose={closeQrModal} size="lg" isCentered>
+            <ModalOverlay bg="blackAlpha.800" />
+            <ModalContent>
+              <ModalHeader>Escanear QR Code</ModalHeader>
+              <ModalCloseButton />
+              <ModalBody pb={6}>
+                <Text fontSize="sm" color="muted" mb={4}>
+                  Aponta a câmara para o QR Code gerado na página de perfil.
+                </Text>
+                <Box 
+                  id="qr-reader" 
+                  w="100%" 
+                  minH="300px" 
+                  borderRadius="12px" 
+                  overflow="hidden"
+                  bg="gray.100"
+                  _dark={{ bg: 'gray.800' }}
+                />
+                <Text fontSize="xs" color="muted" mt={3} textAlign="center">
+                  O login será efetuado automaticamente após a deteção do QR.
+                </Text>
+              </ModalBody>
+            </ModalContent>
+          </Modal>
 
           <Text fontSize="sm">
             Novo na plataforma?{' '}

@@ -56,3 +56,20 @@ export const qrPoll = async (
   const { data } = await api.get(`/auth/qr/poll`, { params: { code } });
   return data;
 };
+
+/**
+ * Gerar QR Code para login (chamado na página de perfil)
+ */
+export const qrGenerate = async (): Promise<{ token: string; expiresAt: string }> => {
+  const { data } = await api.post<{ token: string; expiresAt: string }>('/auth/qr/generate');
+  return data;
+};
+
+/**
+ * Login via token QR escaneado (chamado na página de login)
+ */
+export const qrScanLogin = async (token: string): Promise<AuthResponse> => {
+  const { data } = await api.post<AuthResponse>('/auth/qr/scan-login', { token });
+  return data;
+};
+

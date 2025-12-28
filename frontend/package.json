@@ -20,6 +20,8 @@
         "axios": "^1.6.5",
         "date-fns": "^4.1.0",
         "framer-motion": "^10.18.0",
+        "html5-qrcode": "^2.3.8",
+        "qrcode.react": "^4.2.0",
         "react": "^18.2.0",
         "react-dom": "^18.2.0",
         "react-icons": "^5.5.0",
