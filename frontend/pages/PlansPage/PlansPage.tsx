@@ -38,6 +38,80 @@ import type { TrainingPlan, TrainingSession, ClientProfile } from '../../types/d
 import PageHeader from '../../components/ui/PageHeader';
 import { weekdayLabels } from '../../utils/date';
 
+// Lista de exercícios predefinidos para o dropdown
+const exerciseOptions = [
+  // Peito
+  { value: 'Supino reto', label: 'Supino reto', group: 'Peito' },
+  { value: 'Supino inclinado', label: 'Supino inclinado', group: 'Peito' },
+  { value: 'Supino declinado', label: 'Supino declinado', group: 'Peito' },
+  { value: 'Crucifixo', label: 'Crucifixo', group: 'Peito' },
+  { value: 'Crossover', label: 'Crossover', group: 'Peito' },
+  { value: 'Flexões', label: 'Flexões', group: 'Peito' },
+  { value: 'Peck deck', label: 'Peck deck', group: 'Peito' },
+  // Costas
+  { value: 'Puxada frontal', label: 'Puxada frontal', group: 'Costas' },
+  { value: 'Puxada atrás', label: 'Puxada atrás', group: 'Costas' },
+  { value: 'Remada curvada', label: 'Remada curvada', group: 'Costas' },
+  { value: 'Remada baixa', label: 'Remada baixa', group: 'Costas' },
+  { value: 'Remada unilateral', label: 'Remada unilateral', group: 'Costas' },
+  { value: 'Pull-up', label: 'Pull-up', group: 'Costas' },
+  { value: 'Pullover', label: 'Pullover', group: 'Costas' },
+  { value: 'Levantamento terra', label: 'Levantamento terra', group: 'Costas' },
+  // Ombros
+  { value: 'Press militar', label: 'Press militar', group: 'Ombros' },
+  { value: 'Elevação frontal', label: 'Elevação frontal', group: 'Ombros' },
+  { value: 'Elevação lateral', label: 'Elevação lateral', group: 'Ombros' },
+  { value: 'Elevação posterior', label: 'Elevação posterior', group: 'Ombros' },
+  { value: 'Arnold press', label: 'Arnold press', group: 'Ombros' },
+  { value: 'Encolhimentos', label: 'Encolhimentos', group: 'Ombros' },
+  // Bíceps
+  { value: 'Rosca direta', label: 'Rosca direta', group: 'Bíceps' },
+  { value: 'Rosca alternada', label: 'Rosca alternada', group: 'Bíceps' },
+  { value: 'Rosca martelo', label: 'Rosca martelo', group: 'Bíceps' },
+  { value: 'Rosca concentrada', label: 'Rosca concentrada', group: 'Bíceps' },
+  { value: 'Rosca scott', label: 'Rosca scott', group: 'Bíceps' },
+  // Tríceps
+  { value: 'Tríceps na polia', label: 'Tríceps na polia', group: 'Tríceps' },
+  { value: 'Tríceps testa', label: 'Tríceps testa', group: 'Tríceps' },
+  { value: 'Tríceps francês', label: 'Tríceps francês', group: 'Tríceps' },
+  { value: 'Fundos', label: 'Fundos', group: 'Tríceps' },
+  { value: 'Kickback', label: 'Kickback', group: 'Tríceps' },
+  // Pernas
+  { value: 'Agachamento livre', label: 'Agachamento livre', group: 'Pernas' },
+  { value: 'Agachamento smith', label: 'Agachamento smith', group: 'Pernas' },
+  { value: 'Leg press', label: 'Leg press', group: 'Pernas' },
+  { value: 'Extensão de pernas', label: 'Extensão de pernas', group: 'Pernas' },
+  { value: 'Curl de pernas', label: 'Curl de pernas', group: 'Pernas' },
+  { value: 'Stiff', label: 'Stiff', group: 'Pernas' },
+  { value: 'Avanço', label: 'Avanço', group: 'Pernas' },
+  { value: 'Cadeira adutora', label: 'Cadeira adutora', group: 'Pernas' },
+  { value: 'Cadeira abdutora', label: 'Cadeira abdutora', group: 'Pernas' },
+  { value: 'Gémeos em pé', label: 'Gémeos em pé', group: 'Pernas' },
+  { value: 'Gémeos sentado', label: 'Gémeos sentado', group: 'Pernas' },
+  { value: 'Glúteo máquina', label: 'Glúteo máquina', group: 'Pernas' },
+  { value: 'Hip thrust', label: 'Hip thrust', group: 'Pernas' },
+  // Abdominais
+  { value: 'Abdominal crunch', label: 'Abdominal crunch', group: 'Abdominais' },
+  { value: 'Prancha', label: 'Prancha', group: 'Abdominais' },
+  { value: 'Elevação de pernas', label: 'Elevação de pernas', group: 'Abdominais' },
+  { value: 'Abdominal oblíquo', label: 'Abdominal oblíquo', group: 'Abdominais' },
+  { value: 'Russian twist', label: 'Russian twist', group: 'Abdominais' },
+  // Cardio
+  { value: 'Corrida', label: 'Corrida', group: 'Cardio' },
+  { value: 'Bicicleta', label: 'Bicicleta', group: 'Cardio' },
+  { value: 'Elíptica', label: 'Elíptica', group: 'Cardio' },
+  { value: 'Remo', label: 'Remo', group: 'Cardio' },
+  { value: 'Saltar à corda', label: 'Saltar à corda', group: 'Cardio' },
+  { value: 'HIIT', label: 'HIIT', group: 'Cardio' },
+];
+
+// Agrupar exercícios por grupo muscular
+const exerciseGroups = exerciseOptions.reduce((acc, ex) => {
+  if (!acc[ex.group]) acc[ex.group] = [];
+  acc[ex.group].push(ex);
+  return acc;
+}, {} as Record<string, typeof exerciseOptions>);
+
 const emptySession: Omit<TrainingSession, '_id' | 'planId'> = {
   dayOfWeek: 1,
   order: 0,
@@ -424,16 +498,26 @@ const PlansPage = () => {
                               <SimpleGrid columns={{ base: 1, md: 4 }} spacing={3}>
                                 <FormControl>
                                   <FormLabel fontSize="sm">Nome</FormLabel>
-                                  <Input
+                                  <Select
                                     size="sm"
                                     value={ex.name}
-                                    placeholder="Supino reto"
+                                    placeholder="Selecionar exercício"
                                     onChange={(e) => {
                                       const exercises = [...sessionDraft.exercises];
                                       exercises[idx] = { ...exercises[idx], name: e.target.value };
                                       setSessionDraft({ ...sessionDraft, exercises });
                                     }}
-                                  />
+                                  >
+                                    {Object.entries(exerciseGroups).map(([group, exs]) => (
+                                      <optgroup key={group} label={group}>
+                                        {exs.map((opt) => (
+                                          <option key={opt.value} value={opt.value}>
+                                            {opt.label}
+                                          </option>
+                                        ))}
+                                      </optgroup>
+                                    ))}
+                                  </Select>
                                 </FormControl>
                                 <FormControl>
                                   <FormLabel fontSize="sm">Séries</FormLabel>

@@ -40,10 +40,10 @@ catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     console.error('Erro ao carregar swagger.json:', message);
 }
+app.use('/api/auth/qr', qr_routes_1.default); // Must be before /api/auth to match correctly
 app.use('/api/auth', auth_routes_1.default);
 app.use('/api/uploads', uploads_routes_1.default);
 app.use('/api/chat', chat_routes_1.default);
-app.use('/api/auth/qr', qr_routes_1.default);
 app.use('/api', plans_routes_1.default);
 app.use('/api/users', users_routes_1.default);
 app.use('/api/trainers', trainers_routes_1.default);

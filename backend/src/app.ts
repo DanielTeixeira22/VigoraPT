@@ -43,10 +43,10 @@ try {
   console.error('Erro ao carregar swagger.json:', message);
 }
 
+app.use('/api/auth/qr', qrRoutes);  // Must be before /api/auth to match correctly
 app.use('/api/auth', authRoutes);
 app.use('/api/uploads', uploadRoutes);
 app.use('/api/chat', chatRoutes);
-app.use('/api/auth/qr', qrRoutes);
 app.use('/api', plansRoutes);
 app.use('/api/users', usersRoutes);
 app.use('/api/trainers', trainersRoutes);
