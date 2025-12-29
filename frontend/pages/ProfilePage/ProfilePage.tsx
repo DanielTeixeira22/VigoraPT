@@ -26,20 +26,23 @@ import {
 } from '@chakra-ui/react';
 import { FiLock, FiSettings, FiUser } from 'react-icons/fi';
 import { QRCodeSVG } from 'qrcode.react';
-import { useMutation, useQuery } from '@tanstack/react-query';
-import { useRef, useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useRef, useState, useEffect } from 'react';
 import { changePassword, updateMe } from '../../services/users';
 import { qrGenerate } from '../../services/auth';
 import { uploadFile } from '../../services/uploads';
 import { getMyTrainerProfile, listPublicTrainers } from '../../services/trainers';
 import { getMyClientProfile } from '../../services/clients';
 import { createTrainerChangeRequest, listTrainerChangeRequests } from '../../services/trainerChange';
+import { getCurrentMetrics, recordBodyMetric } from '../../services/bodyMetrics';
 import type { AxiosError } from 'axios';
 import PageHeader from '../../components/ui/PageHeader';
 import { useAuth } from '../../context/AuthContext';
+import ProgressCharts from '../../components/charts/ProgressCharts';
 
 const ProfilePage = () => {
   const toast = useToast();
+  const qc = useQueryClient();
   const { user, refreshSession } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [avatarUploading, setAvatarUploading] = useState(false);
@@ -50,8 +53,8 @@ const ProfilePage = () => {
     firstName: user?.profile.firstName ?? '',
     lastName: user?.profile.lastName ?? '',
     avatarUrl: user?.profile.avatarUrl ?? '',
-    bio: user?.profile.bio ?? '',
   });
+  const [bodyMetrics, setBodyMetrics] = useState({ weight: '', muscleMass: '' });
   const [passwords, setPasswords] = useState({ current: '', next: '' });
   const [qrToken, setQrToken] = useState<{ token: string; expiresAt: string } | null>(null);
   const [qrLoading, setQrLoading] = useState(false);
@@ -68,6 +71,22 @@ const ProfilePage = () => {
     enabled: user?.role === 'CLIENT',
     queryFn: getMyClientProfile,
   });
+
+  // Fetch current body metrics for clients
+  const { data: currentMetricsData } = useQuery({
+    queryKey: ['body-metrics', 'current'],
+    enabled: user?.role === 'CLIENT',
+    queryFn: getCurrentMetrics,
+  });
+
+  useEffect(() => {
+    if (currentMetricsData) {
+      setBodyMetrics({
+        weight: currentMetricsData.currentWeight?.toString() ?? '',
+        muscleMass: currentMetricsData.currentMuscleMass?.toString() ?? '',
+      });
+    }
+  }, [currentMetricsData]);
 
   const { data: trainerOptions } = useQuery({
     queryKey: ['trainers', 'public', 'for-change'],
@@ -260,10 +279,64 @@ const ProfilePage = () => {
                         <Input value={local.lastName} onChange={(e) => setLocal({ ...local, lastName: e.target.value })} />
                       </FormControl>
                     </HStack>
-                    <FormControl>
-                      <FormLabel fontWeight={600}>Bio</FormLabel>
-                      <Textarea value={local.bio} onChange={(e) => setLocal({ ...local, bio: e.target.value })} rows={4} />
-                    </FormControl>
+
+                    {/* Weight and Muscle Mass for Clients */}
+                    {user?.role === 'CLIENT' && (
+                      <Box p={4} bg="brand.50" _dark={{ bg: 'gray.700' }} borderRadius="12px">
+                        <Text fontWeight={600} mb={3}>📊 Métricas Corporais</Text>
+                        <HStack spacing={4}>
+                          <FormControl>
+                            <FormLabel fontWeight={600}>Peso (kg)</FormLabel>
+                            <Input
+                              type="number"
+                              step="0.1"
+                              placeholder="Ex: 70.5"
+                              value={bodyMetrics.weight}
+                              onChange={(e) => setBodyMetrics({ ...bodyMetrics, weight: e.target.value })}
+                            />
+                          </FormControl>
+                          <FormControl>
+                            <FormLabel fontWeight={600}>Massa Muscular (%)</FormLabel>
+                            <Input
+                              type="number"
+                              step="0.1"
+                              placeholder="Ex: 16.5"
+                              value={bodyMetrics.muscleMass}
+                              onChange={(e) => setBodyMetrics({ ...bodyMetrics, muscleMass: e.target.value })}
+                            />
+                          </FormControl>
+                        </HStack>
+                        <Button
+                          mt={3}
+                          size="sm"
+                          colorScheme="brand"
+                          variant="outline"
+                          onClick={async () => {
+                            try {
+                              await recordBodyMetric({
+                                weight: bodyMetrics.weight ? parseFloat(bodyMetrics.weight) : undefined,
+                                muscleMass: bodyMetrics.muscleMass ? parseFloat(bodyMetrics.muscleMass) : undefined,
+                              });
+                              toast({ title: 'Métricas atualizadas!', status: 'success' });
+                              // Invalidate queries so they refresh automatically
+                              qc.invalidateQueries({ queryKey: ['body-metrics'] });
+                            } catch {
+                              toast({ title: 'Erro ao atualizar métricas', status: 'error' });
+                            }
+                          }}
+                        >
+                          Atualizar métricas
+                        </Button>
+                      </Box>
+                    )}
+
+                    {/* Progress Charts for Clients */}
+                    {user?.role === 'CLIENT' && (
+                      <Box mt={4}>
+                        <Text fontWeight={600} mb={3}>📈 Evolução do Progresso</Text>
+                        <ProgressCharts limit={30} />
+                      </Box>
+                    )}
                     <Button type="submit" colorScheme="brand" size="lg" isLoading={mutation.isPending}>
                       Guardar alterações
                     </Button>

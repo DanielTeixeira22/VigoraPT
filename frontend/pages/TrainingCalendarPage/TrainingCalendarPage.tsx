@@ -12,6 +12,12 @@ import {
   Grid,
   GridItem,
   Input,
+  Modal,
+  ModalOverlay,
+  ModalContent,
+  ModalHeader,
+  ModalBody,
+  ModalCloseButton,
   Select,
   Stack,
   Text,
@@ -20,6 +26,7 @@ import {
   HStack,
   IconButton,
   Icon,
+  Image,
 } from '@chakra-ui/react';
 import { FiChevronLeft, FiChevronRight, FiEye } from 'react-icons/fi';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -32,6 +39,7 @@ import { uploadFile } from '../../services/uploads';
 import type { TrainingPlan, CompletionLog } from '../../types/domain';
 import PageHeader from '../../components/ui/PageHeader';
 import { formatDateTime, normalizeDateOnly, weekdayLabels } from '../../utils/date';
+import { recordBodyMetric, getCurrentMetrics } from '../../services/bodyMetrics';
 
 const TrainingCalendarPage = () => {
   const navigate = useNavigate();
@@ -52,8 +60,27 @@ const TrainingCalendarPage = () => {
   const goToCurrentWeek = () => setWeekOffset(0);
   const [reason, setReason] = useState('');
   const [file, setFile] = useState<File | null>(null);
-  const [targetSession, setTargetSession] = useState<string | null>(null);
+  const [targetSession, setTargetSession] = useState<{ sessionId: string; date: Date } | null>(null);
   const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set());
+  
+  // States for completion modal with metrics
+  const [completionModal, setCompletionModal] = useState<{ sessionId: string; date: Date } | null>(null);
+  const [completionMetrics, setCompletionMetrics] = useState({ weight: '', muscleMass: '' });
+
+  // Fetch current body metrics to pre-fill modal
+  const { data: currentMetrics } = useQuery({
+    queryKey: ['body-metrics', 'current'],
+    queryFn: getCurrentMetrics,
+  });
+
+  const openCompletionModal = (sessionId: string, date: Date) => {
+    // Pre-fill with current metrics if available
+    setCompletionMetrics({
+      weight: currentMetrics?.currentWeight?.toString() ?? '',
+      muscleMass: currentMetrics?.currentMuscleMass?.toString() ?? '',
+    });
+    setCompletionModal({ sessionId, date });
+  };
 
   const toggleCard = (cardKey: string) => {
     setExpandedCards((prev) => {
@@ -122,7 +149,19 @@ const TrainingCalendarPage = () => {
         proofImage,
       });
     },
-    onSuccess: () => {
+    onSuccess: async () => {
+      // Record body metrics if provided and status is DONE
+      if (completionModal && (completionMetrics.weight || completionMetrics.muscleMass)) {
+        try {
+          await recordBodyMetric({
+            weight: completionMetrics.weight ? parseFloat(completionMetrics.weight) : undefined,
+            muscleMass: completionMetrics.muscleMass ? parseFloat(completionMetrics.muscleMass) : undefined,
+          });
+        } catch {
+          // Silently fail metric recording
+        }
+      }
+      
       toast({
         title: 'Registado',
         description: 'Estado do treino atualizado.',
@@ -131,7 +170,13 @@ const TrainingCalendarPage = () => {
       setReason('');
       setFile(null);
       setTargetSession(null);
-      qc.invalidateQueries({ queryKey: ['completion', activePlan?._id] });
+      setCompletionModal(null);
+      setCompletionMetrics({ weight: '', muscleMass: '' });
+      qc.invalidateQueries({ queryKey: ['completion'] });
+      // Invalidate body metrics so they refresh automatically
+      qc.invalidateQueries({ queryKey: ['body-metrics'] });
+      // Invalidate stats so Dashboard updates
+      qc.invalidateQueries({ queryKey: ['stats'] });
     },
     onError: (err: unknown) => {
       toast({
@@ -377,7 +422,7 @@ const TrainingCalendarPage = () => {
                                       variant="solid"
                                       onClick={(e) => {
                                         e.stopPropagation();
-                                        completionMutation.mutate({ sessionId: s._id!, date, status: 'DONE' });
+                                        openCompletionModal(s._id!, date);
                                       }}
                                       isDisabled={completionMutation.isPending}
                                       _hover={{ transform: 'translateY(-1px)', boxShadow: 'md' }}
@@ -392,7 +437,7 @@ const TrainingCalendarPage = () => {
                                       borderColor="orange.200"
                                       onClick={(e) => {
                                         e.stopPropagation();
-                                        setTargetSession(s._id || null);
+                                        setTargetSession({ sessionId: s._id!, date });
                                       }}
                                       _hover={{ bg: 'orange.50' }}
                                       isDisabled={completionMutation.isPending}
@@ -402,39 +447,6 @@ const TrainingCalendarPage = () => {
                                   </>
                                 )}
                               </Flex>
-
-                              {targetSession === s._id && (
-                                <Box
-                                  mt={4}
-                                  p={3}
-                                  border="1px dashed"
-                                  borderColor="border"
-                                  borderRadius="12px"
-                                  bg="rgba(255,166,43,0.06)"
-                                >
-                                  <FormControl>
-                                    <FormLabel fontSize="sm">Motivo</FormLabel>
-                                    <Textarea
-                                      value={reason}
-                                      onChange={(e) => setReason(e.target.value)}
-                                      placeholder="Ex.: indisposição, falta de tempo..."
-                                    />
-                                  </FormControl>
-                                  <FormControl mt={2}>
-                                    <FormLabel fontSize="sm">Comprovativo (imagem)</FormLabel>
-                                    <Input type="file" accept="image/*" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
-                                  </FormControl>
-                                  <Button
-                                    size="sm"
-                                    mt={3}
-                                    colorScheme="orange"
-                                    onClick={() => completionMutation.mutate({ sessionId: s._id!, date, status: 'MISSED' })}
-                                    isLoading={completionMutation.isPending}
-                                  >
-                                    Submeter falta
-                                  </Button>
-                                </Box>
-                              )}
 
                               {isFailed && (
                                 <Stack spacing={1} mt={3}>
@@ -457,6 +469,277 @@ const TrainingCalendarPage = () => {
           );
         })}
       </Grid>
+
+      {/* Modal para registar falta */}
+      <Modal 
+        isOpen={!!targetSession} 
+        onClose={() => {
+          setTargetSession(null);
+          setReason('');
+          setFile(null);
+        }}
+        isCentered
+        size="md"
+      >
+        <ModalOverlay bg="blackAlpha.600" backdropFilter="blur(4px)" />
+        <ModalContent 
+          borderRadius="20px" 
+          mx={4}
+          bg="white"
+          _dark={{ bg: 'gray.800' }}
+        >
+          <ModalHeader pb={0}>
+            <Flex align="center" gap={3}>
+              <Box
+                bg="orange.400"
+                color="white"
+                p={2}
+                borderRadius="12px"
+                fontSize="xl"
+              >
+                📝
+              </Box>
+              <Box>
+                <Text fontWeight={700} fontSize="lg">Registar falta</Text>
+                <Text fontSize="sm" color="gray.500" fontWeight={400}>
+                  Explica o motivo e adiciona um comprovativo
+                </Text>
+              </Box>
+            </Flex>
+          </ModalHeader>
+          <ModalCloseButton top={4} right={4} />
+          
+          <ModalBody py={6}>
+            <Stack spacing={5}>
+              <FormControl>
+                <FormLabel fontSize="sm" fontWeight={600}>
+                  💬 Motivo
+                </FormLabel>
+                <Textarea
+                  value={reason}
+                  onChange={(e) => setReason(e.target.value)}
+                  placeholder="Ex.: indisposição, falta de tempo, lesão..."
+                  borderRadius="12px"
+                  rows={3}
+                  _focus={{ borderColor: 'orange.400', boxShadow: '0 0 0 1px var(--chakra-colors-orange-400)' }}
+                />
+              </FormControl>
+
+              <FormControl>
+                <FormLabel fontSize="sm" fontWeight={600}>
+                  📷 Comprovativo (opcional)
+                </FormLabel>
+                <Box
+                  border="2px dashed"
+                  borderColor={file ? 'green.300' : 'gray.200'}
+                  borderRadius="12px"
+                  p={5}
+                  textAlign="center"
+                  bg={file ? 'green.50' : 'gray.50'}
+                  _dark={{ 
+                    bg: file ? 'green.900' : 'gray.700',
+                    borderColor: file ? 'green.500' : 'gray.600'
+                  }}
+                  transition="all 0.2s"
+                  cursor="pointer"
+                  _hover={{ 
+                    borderColor: 'orange.300', 
+                    bg: 'orange.50',
+                    _dark: { bg: 'orange.900' }
+                  }}
+                  onClick={() => document.getElementById('file-input-modal')?.click()}
+                >
+                  <Input
+                    id="file-input-modal"
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+                    display="none"
+                  />
+                  {file ? (
+                    <Box textAlign="center">
+                      <Image
+                        src={URL.createObjectURL(file)}
+                        alt="Preview"
+                        maxH="120px"
+                        borderRadius="8px"
+                        mx="auto"
+                        mb={2}
+                        objectFit="cover"
+                      />
+                      <Text fontSize="sm" fontWeight={600} color="green.600" _dark={{ color: 'green.300' }}>
+                        {file.name}
+                      </Text>
+                      <Text fontSize="xs" color="gray.500">
+                        Clica para alterar
+                      </Text>
+                    </Box>
+                  ) : (
+                    <>
+                      <Flex justify="center" mb={2}>
+                        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <path d="M12 16V8M12 8L8 12M12 8L16 12" stroke="#9CA3AF" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                          <path d="M3 15V16C3 18.2091 4.79086 20 7 20H17C19.2091 20 21 18.2091 21 16V15" stroke="#9CA3AF" strokeWidth="2" strokeLinecap="round"/>
+                        </svg>
+                      </Flex>
+                      <Text fontSize="sm" fontWeight={500} color="gray.600" _dark={{ color: 'gray.300' }}>
+                        Clica para escolher imagem
+                      </Text>
+                      <Text fontSize="xs" color="gray.400">
+                        JPG, PNG ou GIF
+                      </Text>
+                    </>
+                  )}
+                </Box>
+              </FormControl>
+
+              <Flex gap={3} pt={2}>
+                <Button
+                  flex={1}
+                  colorScheme="orange"
+                  size="lg"
+                  borderRadius="12px"
+                  onClick={() => {
+                    if (targetSession) {
+                      completionMutation.mutate({ 
+                        sessionId: targetSession.sessionId, 
+                        date: targetSession.date, 
+                        status: 'MISSED' 
+                      });
+                    }
+                  }}
+                  isLoading={completionMutation.isPending}
+                  _hover={{ transform: 'translateY(-2px)', boxShadow: 'lg' }}
+                  transition="all 0.2s"
+                >
+                  Submeter falta
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="lg"
+                  borderRadius="12px"
+                  onClick={() => {
+                    setTargetSession(null);
+                    setReason('');
+                    setFile(null);
+                  }}
+                >
+                  Cancelar
+                </Button>
+              </Flex>
+            </Stack>
+          </ModalBody>
+        </ModalContent>
+      </Modal>
+
+      {/* Modal para concluir treino com métricas */}
+      <Modal 
+        isOpen={!!completionModal} 
+        onClose={() => {
+          setCompletionModal(null);
+          setCompletionMetrics({ weight: '', muscleMass: '' });
+        }}
+        isCentered
+        size="md"
+      >
+        <ModalOverlay bg="blackAlpha.600" backdropFilter="blur(4px)" />
+        <ModalContent 
+          borderRadius="20px" 
+          mx={4}
+          bg="white"
+          _dark={{ bg: 'gray.800' }}
+        >
+          <ModalHeader pb={0}>
+            <Flex align="center" gap={3}>
+              <Box
+                bg="brand.500"
+                color="white"
+                p={2}
+                borderRadius="12px"
+                fontSize="xl"
+              >
+                ✅
+              </Box>
+              <Box>
+                <Text fontWeight={700} fontSize="lg">Concluir Treino</Text>
+                <Text fontSize="sm" color="gray.500" fontWeight={400}>
+                  Regista as tuas métricas atuais (opcional)
+                </Text>
+              </Box>
+            </Flex>
+          </ModalHeader>
+          <ModalCloseButton top={4} right={4} />
+          
+          <ModalBody py={6}>
+            <Stack spacing={5}>
+              <Box p={4} bg="brand.50" _dark={{ bg: 'gray.700' }} borderRadius="12px">
+                <Text fontWeight={600} mb={3} fontSize="sm">📊 Métricas Corporais (opcional)</Text>
+                <HStack spacing={4}>
+                  <FormControl>
+                    <FormLabel fontSize="sm" fontWeight={600}>Peso (kg)</FormLabel>
+                    <Input
+                      type="number"
+                      step="0.1"
+                      placeholder="Ex: 70.5"
+                      value={completionMetrics.weight}
+                      onChange={(e) => setCompletionMetrics({ ...completionMetrics, weight: e.target.value })}
+                      borderRadius="10px"
+                    />
+                  </FormControl>
+                  <FormControl>
+                    <FormLabel fontSize="sm" fontWeight={600}>Massa Muscular (%)</FormLabel>
+                    <Input
+                      type="number"
+                      step="0.1"
+                      placeholder="Ex: 16.5"
+                      value={completionMetrics.muscleMass}
+                      onChange={(e) => setCompletionMetrics({ ...completionMetrics, muscleMass: e.target.value })}
+                      borderRadius="10px"
+                    />
+                  </FormControl>
+                </HStack>
+                <Text fontSize="xs" color="gray.500" mt={2}>
+                  As métricas ajudam a acompanhar o teu progresso ao longo do tempo.
+                </Text>
+              </Box>
+
+              <Flex gap={3}>
+                <Button
+                  flex={1}
+                  colorScheme="brand"
+                  size="lg"
+                  borderRadius="12px"
+                  onClick={() => {
+                    if (completionModal) {
+                      completionMutation.mutate({ 
+                        sessionId: completionModal.sessionId, 
+                        date: completionModal.date, 
+                        status: 'DONE' 
+                      });
+                    }
+                  }}
+                  isLoading={completionMutation.isPending}
+                  _hover={{ transform: 'translateY(-2px)', boxShadow: 'lg' }}
+                  transition="all 0.2s"
+                >
+                  Confirmar conclusão
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="lg"
+                  borderRadius="12px"
+                  onClick={() => {
+                    setCompletionModal(null);
+                    setCompletionMetrics({ weight: '', muscleMass: '' });
+                  }}
+                >
+                  Cancelar
+                </Button>
+              </Flex>
+            </Stack>
+          </ModalBody>
+        </ModalContent>
+      </Modal>
     </Box>
   );
 };

@@ -20,6 +20,7 @@ const clients_routes_1 = __importDefault(require("./routes/clients.routes"));
 const trainer_change_routes_1 = __importDefault(require("./routes/trainer-change.routes"));
 const notifications_routes_1 = __importDefault(require("./routes/notifications.routes"));
 const stats_routes_1 = __importDefault(require("./routes/stats.routes"));
+const bodyMetrics_routes_1 = __importDefault(require("./routes/bodyMetrics.routes"));
 const app = (0, express_1.default)();
 app.use((0, cors_1.default)());
 app.use(express_1.default.json());
@@ -51,6 +52,7 @@ app.use('/api/clients', clients_routes_1.default);
 app.use('/api/trainer-change-requests', trainer_change_routes_1.default);
 app.use('/api/notifications', notifications_routes_1.default);
 app.use('/api/stats', stats_routes_1.default);
+app.use('/api/body-metrics', bodyMetrics_routes_1.default);
 app.use((req, res) => {
     res.status(404).json({ message: 'Endpoint não encontrado.' });
 });

@@ -16,6 +16,7 @@ import clientsRoutes from './routes/clients.routes';
 import trainerChangeRoutes from './routes/trainer-change.routes';
 import notificationRoutes from './routes/notifications.routes';
 import statsRoutes from './routes/stats.routes';
+import bodyMetricsRoutes from './routes/bodyMetrics.routes';
 
 
 
@@ -54,9 +55,7 @@ app.use('/api/clients', clientsRoutes);
 app.use('/api/trainer-change-requests', trainerChangeRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/stats', statsRoutes);
-
-
-
+app.use('/api/body-metrics', bodyMetricsRoutes);
 app.use((req: Request, res: Response) => {
   res.status(404).json({ message: 'Endpoint não encontrado.' });
 });

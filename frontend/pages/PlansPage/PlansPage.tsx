@@ -1,4 +1,10 @@
 import {
+  AlertDialog,
+  AlertDialogBody,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogContent,
+  AlertDialogOverlay,
   Badge,
   Box,
   Button,
@@ -29,7 +35,7 @@ import {
 } from '@chakra-ui/react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { FormEvent } from 'react';
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useRef } from 'react';
 import { FiChevronUp, FiEdit2, FiPlus, FiTrash2 } from 'react-icons/fi';
 import { listPlans, createPlan, listSessions, createSession, updateSession, deleteSession } from '../../services/plans';
 import { getMyTrainerProfile } from '../../services/trainers';
@@ -128,6 +134,10 @@ const PlansPage = () => {
   const [selectedClient, setSelectedClient] = useState<string>('');
   const [selectedPlan, setSelectedPlan] = useState<TrainingPlan | null>(null);
   const [tabIndex, setTabIndex] = useState(0);
+
+  // State for delete confirmation
+  const [deleteSessionId, setDeleteSessionId] = useState<string | null>(null);
+  const cancelRef = useRef<HTMLButtonElement>(null);
   const [sessionDraft, setSessionDraft] = useState<Omit<TrainingSession, '_id' | 'planId'>>(emptySession);
   const [sessionEditingId, setSessionEditingId] = useState<string | null>(null);
 
@@ -609,7 +619,7 @@ const PlansPage = () => {
                                       size="xs"
                                       colorScheme="red"
                                       variant="ghost"
-                                      onClick={() => s._id && sessionDeleteMutation.mutate(s._id)}
+                                      onClick={() => s._id && setDeleteSessionId(s._id)}
                                     />
                                   </HStack>
                                 </Flex>
@@ -636,6 +646,45 @@ const PlansPage = () => {
           </TabPanel>
         </TabPanels>
       </Tabs>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog
+        isOpen={!!deleteSessionId}
+        leastDestructiveRef={cancelRef}
+        onClose={() => setDeleteSessionId(null)}
+        isCentered
+      >
+        <AlertDialogOverlay>
+          <AlertDialogContent>
+            <AlertDialogHeader fontSize="lg" fontWeight="bold">
+              🗑️ Apagar Sessão
+            </AlertDialogHeader>
+
+            <AlertDialogBody>
+              Tens a certeza que queres apagar esta sessão? Esta ação não pode ser desfeita.
+            </AlertDialogBody>
+
+            <AlertDialogFooter>
+              <Button ref={cancelRef} onClick={() => setDeleteSessionId(null)}>
+                Cancelar
+              </Button>
+              <Button
+                colorScheme="red"
+                onClick={() => {
+                  if (deleteSessionId) {
+                    sessionDeleteMutation.mutate(deleteSessionId);
+                    setDeleteSessionId(null);
+                  }
+                }}
+                ml={3}
+                isLoading={sessionDeleteMutation.isPending}
+              >
+                Apagar
+              </Button>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialogOverlay>
+      </AlertDialog>
     </Box>
   );
 };

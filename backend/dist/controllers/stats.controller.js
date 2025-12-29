@@ -40,7 +40,7 @@ const completionsByWeek = async (req, res, next) => {
             {
                 $group: {
                     _id: {
-                        year: { $year: '$date' },
+                        year: { $isoWeekYear: '$date' },
                         week: { $isoWeek: '$date' },
                     },
                     totalCompletions: { $sum: 1 },
@@ -136,7 +136,7 @@ const myCompletionsByWeek = async (req, res, next) => {
             {
                 $group: {
                     _id: {
-                        year: { $year: '$date' },
+                        year: { $isoWeekYear: '$date' },
                         week: { $isoWeek: '$date' },
                     },
                     totalCompletions: { $sum: 1 },

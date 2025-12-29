@@ -31,6 +31,16 @@ const ClientProfileSchema = new mongoose_1.Schema({
         type: String,
         trim: true,
     },
+    currentWeight: {
+        type: Number,
+        min: 0,
+        max: 500,
+    },
+    currentMuscleMass: {
+        type: Number,
+        min: 0,
+        max: 100,
+    },
 }, { timestamps: true });
 // Índices úteis para listagens
 ClientProfileSchema.index({ createdAt: -1 });

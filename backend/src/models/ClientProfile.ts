@@ -7,6 +7,8 @@ export interface ClientProfile {
   goals?: string;
   injuries?: string;
   preferences?: string;
+  currentWeight?: number;     // kg
+  currentMuscleMass?: number; // percentage
   createdAt: Date;
   updatedAt: Date;
 }
@@ -43,6 +45,16 @@ const ClientProfileSchema = new Schema<ClientProfile>(
     preferences: {
       type: String,
       trim: true,
+    },
+    currentWeight: {
+      type: Number,
+      min: 0,
+      max: 500,
+    },
+    currentMuscleMass: {
+      type: Number,
+      min: 0,
+      max: 100,
     },
   },
   { timestamps: true }

@@ -43,7 +43,7 @@ export const completionsByWeek = async (req: Request, res: Response, next: NextF
       {
         $group: {
           _id: {
-            year: { $year: '$date' },
+            year: { $isoWeekYear: '$date' },
             week: { $isoWeek: '$date' },
           },
           totalCompletions: { $sum: 1 },
@@ -145,7 +145,7 @@ export const myCompletionsByWeek = async (req: Request, res: Response, next: Nex
       {
         $group: {
           _id: {
-            year: { $year: '$date' },
+            year: { $isoWeekYear: '$date' },
             week: { $isoWeek: '$date' },
           },
           totalCompletions: { $sum: 1 },
