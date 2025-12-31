@@ -4,12 +4,13 @@ import { Box, Flex, Heading, Icon, Text, VStack } from '@chakra-ui/react';
 import { NavLink } from 'react-router-dom';
 import { FiActivity, FiBarChart2, FiCalendar, FiHome, FiMessageCircle, FiSettings, FiUsers } from 'react-icons/fi';
 import { MdOutlineAdminPanelSettings } from 'react-icons/md';
+import { IconType } from 'react-icons';
 import { useAuth } from '../../context/AuthContext';
 
 interface NavItem {
   label: string;
   to: string;
-  icon: typeof Icon;
+  icon: IconType;
   roles?: string[];
 }
 

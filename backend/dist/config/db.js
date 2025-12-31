@@ -14,7 +14,6 @@ const connectDB = async () => {
     }
     mongoose_1.default.connection.on('connected', () => console.log('Conectado ao MongoDB'));
     mongoose_1.default.connection.on('error', (err) => console.error('MongoDB error:', err.message));
-    mongoose_1.default.connection.on('disconnected', () => console.warn('MongoDB desconectado'));
     const maxRetries = 5;
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
         try {

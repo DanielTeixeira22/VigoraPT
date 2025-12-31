@@ -34,13 +34,9 @@ try {
         app.use('/api-docs', swagger_ui_express_1.default.serve, swagger_ui_express_1.default.setup(swaggerDoc));
         console.log('📘 Swagger disponível em /api-docs');
     }
-    else {
-        console.warn('⚠️  swagger.json não encontrado em src/docs/');
-    }
 }
-catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    console.error('Erro ao carregar swagger.json:', message);
+catch {
+    // Swagger loading failed silently
 }
 // QR login must be registered before /api/auth to avoid route conflicts.
 app.use('/api/auth/qr', qr_routes_1.default);
@@ -60,7 +56,6 @@ app.use((req, res) => {
 });
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 app.use((err, _req, res, _next) => {
-    console.error('Erro:', err);
     res.status(err.status || 500).json({
         message: err.message || 'Erro interno do servidor.',
     });

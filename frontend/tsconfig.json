@@ -24,6 +24,12 @@
         "**/*.ts",
         "**/*.tsx"
     ],
+    "exclude": [
+        "node_modules",
+        "vite.config.ts",
+        "**/*.test.ts",
+        "**/*.test.tsx"
+    ],
     "references": [
         {
             "path": "./tsconfig.node.json"

@@ -38,7 +38,6 @@ const initSocketServer = (httpServer) => {
     });
     io.on('connection', (socket) => {
         const userId = socket.data.userId;
-        console.log(`[Socket] User ${userId} connected (socket: ${socket.id})`);
         // Register the socket for the user.
         if (!userSockets.has(userId)) {
             userSockets.set(userId, new Set());
@@ -49,7 +48,6 @@ const initSocketServer = (httpServer) => {
         // Cleanup state when the socket disconnects.
         socket.on('disconnect', () => {
             var _a, _b;
-            console.log(`[Socket] User ${userId} disconnected (socket: ${socket.id})`);
             (_a = userSockets.get(userId)) === null || _a === void 0 ? void 0 : _a.delete(socket.id);
             if (((_b = userSockets.get(userId)) === null || _b === void 0 ? void 0 : _b.size) === 0) {
                 userSockets.delete(userId);
@@ -58,13 +56,11 @@ const initSocketServer = (httpServer) => {
         // Join/leave conversation rooms for chat.
         socket.on('join:conversation', (conversationId) => {
             socket.join(`conversation:${conversationId}`);
-            console.log(`[Socket] User ${userId} joined conversation ${conversationId}`);
         });
         socket.on('leave:conversation', (conversationId) => {
             socket.leave(`conversation:${conversationId}`);
         });
     });
-    console.log('[Socket] WebSocket server initialized');
     return io;
 };
 exports.initSocketServer = initSocketServer;

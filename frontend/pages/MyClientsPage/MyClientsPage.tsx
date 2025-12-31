@@ -21,7 +21,7 @@ import {
 } from '@chakra-ui/react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
-import { FiMail, FiTarget, FiSend, FiUserPlus, FiSearch, FiUser, FiCalendar } from 'react-icons/fi';
+import { FiMail, FiTarget, FiSend, FiUserPlus, FiSearch, FiUser } from 'react-icons/fi';
 import { listMyClients, trainerCreateClient } from '../../services/clients';
 import { sendAlert } from '../../services/notifications';
 import PageHeader from '../../components/ui/PageHeader';
@@ -72,7 +72,7 @@ const MyClientsPage = () => {
 
   const filtered = useMemo(() => {
     const term = search.toLowerCase();
-    return (data ?? []).filter((c: ClientWithUser) => {
+    return ((data ?? []) as ClientWithUser[]).filter((c) => {
       const u = c.userId;
       return (
         (u?.username ?? '').toLowerCase().includes(term) ||
@@ -116,7 +116,7 @@ const MyClientsPage = () => {
       <Grid templateColumns={{ base: '1fr', lg: '2fr 1fr' }} gap={6}>
         <GridItem>
           <SimpleGrid columns={{ base: 1, md: 2 }} spacing={5}>
-            {filtered.map((c: ClientWithUser) => {
+            {filtered.map((c) => {
               const name = c.userId?.profile?.firstName 
                 ? `${c.userId.profile.firstName}${c.userId.profile?.lastName ? ` ${c.userId.profile.lastName}` : ''}`
                 : c.userId?.username || 'Cliente';
@@ -192,7 +192,7 @@ const MyClientsPage = () => {
                       size="sm"
                       colorScheme="brand"
                       leftIcon={<Icon as={FiSend} />}
-                      onClick={() => alertMutation.mutate({ clientId: c._id, message: alerts[c._id!] })}
+                      onClick={() => c._id && alertMutation.mutate({ clientId: c._id, message: alerts[c._id!] })}
                       isLoading={alertMutation.isPending}
                       isDisabled={!alerts[c._id!]?.trim()}
                       borderRadius="10px"

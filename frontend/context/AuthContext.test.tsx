@@ -1,8 +1,17 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider, useAuth } from './AuthContext';
 import * as authApi from '../services/auth';
+
+// Create a fresh QueryClient for each test
+const createTestQueryClient = () => new QueryClient({
+  defaultOptions: {
+    queries: { retry: false },
+    mutations: { retry: false },
+  },
+});
 
 // Mock the API module.
 vi.mock('../services/auth');
@@ -51,10 +60,13 @@ describe('AuthContext', () => {
     });
 
     it('começa com isLoading true e sem utilizador', async () => {
+      const queryClient = createTestQueryClient();
       render(
-        <AuthProvider>
-          <TestComponent />
-        </AuthProvider>
+        <QueryClientProvider client={queryClient}>
+          <AuthProvider>
+            <TestComponent />
+          </AuthProvider>
+        </QueryClientProvider>
       );
 
       // Espera loading terminar
@@ -81,10 +93,13 @@ describe('AuthContext', () => {
         refreshToken: 'fake-refresh',
       });
 
+      const queryClient = createTestQueryClient();
       render(
-        <AuthProvider>
-          <TestComponent />
-        </AuthProvider>
+        <QueryClientProvider client={queryClient}>
+          <AuthProvider>
+            <TestComponent />
+          </AuthProvider>
+        </QueryClientProvider>
       );
 
       // Espera loading terminar
@@ -118,10 +133,13 @@ describe('AuthContext', () => {
         refreshToken: 'fake-refresh',
       });
 
+      const queryClient = createTestQueryClient();
       render(
-        <AuthProvider>
-          <TestComponent />
-        </AuthProvider>
+        <QueryClientProvider client={queryClient}>
+          <AuthProvider>
+            <TestComponent />
+          </AuthProvider>
+        </QueryClientProvider>
       );
 
       await waitFor(() => {
