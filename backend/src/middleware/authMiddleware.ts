@@ -32,9 +32,7 @@ const authMiddleware: RequestHandler = async (req, res, next) => {
 
     req.user = user;
     return next();
-  } catch (err) {
-    const message = err instanceof Error ? err.message : 'Token inválido ou expirado.';
-    console.error('[Auth] Erro:', message);
+  } catch {
     return res.status(401).json({ message: 'Token inválido ou expirado.' });
   }
 };

@@ -10,7 +10,6 @@ export const connectDB = async (): Promise<void> => {
   }
   mongoose.connection.on('connected', () => console.log('Conectado ao MongoDB'));
   mongoose.connection.on('error', (err) => console.error('MongoDB error:', err.message));
-  mongoose.connection.on('disconnected', () => console.warn('MongoDB desconectado'));
   const maxRetries = 5;
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {

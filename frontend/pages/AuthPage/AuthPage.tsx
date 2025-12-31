@@ -117,9 +117,8 @@ const AuthPage = () => {
           await scannerRef.current.stop();
         }
         scannerRef.current.clear();
-      } catch (err) {
+      } catch {
         // Ignorar erros silenciosamente
-        console.debug('Scanner cleanup:', err);
       }
       scannerRef.current = null;
       setScannerActive(false);
@@ -172,8 +171,7 @@ const AuthPage = () => {
         }
       );
       setScannerActive(true);
-    } catch (err) {
-      console.error('Erro ao iniciar scanner:', err);
+    } catch {
       toast({ title: 'Erro ao aceder à câmara', description: 'Verifica as permissões do browser.', status: 'error' });
     }
   }, [applyAuthResponse, closeQrModal, navigate, scannerActive, toast]);

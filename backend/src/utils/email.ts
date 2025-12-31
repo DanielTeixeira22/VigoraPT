@@ -23,12 +23,7 @@ function getTransporter(): Transporter {
     const user = process.env.SMTP_USER;
     const pass = process.env.SMTP_PASS;
 
-    console.log('[Email] Configurando transporter SMTP:', {
-      host,
-      port,
-      user: user ? `${user.substring(0, 3)}***` : 'NÃO DEFINIDO',
-      passConfigured: !!pass,
-    });
+
 
     if (!user || !pass) {
       console.error('[Email] ERRO: SMTP_USER ou SMTP_PASS não configurados no .env');
@@ -137,7 +132,7 @@ ${resetUrl}
 © ${new Date().getFullYear()} Vigora. Todos os direitos reservados.
   `.trim();
 
-  console.log('[Email] A enviar email de reset para:', to);
+
 
   try {
     const transport = getTransporter();
@@ -148,7 +143,7 @@ ${resetUrl}
       text,
       html,
     });
-    console.log('[Email] Email enviado com sucesso! MessageId:', result.messageId);
+
   } catch (error) {
     console.error('[Email] ERRO ao enviar email:', error);
     throw error; // Re-throw para que o controller possa tratar
