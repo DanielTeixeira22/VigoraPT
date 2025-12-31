@@ -1,3 +1,5 @@
+// API service for Trainers.
+
 import { api } from './httpClient';
 import type { TrainerProfile } from '../types/domain';
 

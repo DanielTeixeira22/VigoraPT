@@ -6,7 +6,7 @@ import { listPublicTrainers } from '../controllers/trainer.controller';
 
 const router = Router();
 
-// rota pública (listagem)
+// Public route (listing).
 router.get('/public', listPublicTrainers);
 
 router.use(auth);

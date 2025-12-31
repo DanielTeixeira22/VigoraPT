@@ -16,12 +16,12 @@ const router = Router();
 
 router.use(auth);
 
-// USER (próprio utilizador)
+// USER (self).
 router.get('/me', getMe);
 router.put('/me', updateMe);
 router.patch('/me/password', changeMyPassword);
 
-// ADMIN (gestão de utilizadores)
+// ADMIN (user management).
 router.get('/', requireRole('ADMIN'), searchUsers);
 router.post('/', requireRole('ADMIN'), adminCreateUser);
 router.put('/:id', requireRole('ADMIN'), adminUpdateUser);

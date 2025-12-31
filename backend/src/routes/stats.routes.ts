@@ -1,19 +1,22 @@
 import { Router } from 'express';
 import auth from '../middleware/authMiddleware';
-import { completionsByWeek, completionsByMonth, myCompletionsByWeek, myCompletionsByMonth } from '../controllers/stats.controller';
+import { completionsByWeek, completionsByMonth, myCompletionsByWeek, myCompletionsByMonth, adminOverview } from '../controllers/stats.controller';
 
 const router = Router();
 
-// só utilizadores autenticados podem ver stats
+// Only authenticated users can view stats.
 router.use(auth);
 
-// nº de treinos concluídos por semana
+// Number of workouts completed per week.
 router.get('/completions/weekly', completionsByWeek);
 
-// nº de treinos concluídos por mês
+// Number of workouts completed per month.
 router.get('/completions/monthly', completionsByMonth);
 
 router.get('/my/weekly', myCompletionsByWeek);
 router.get('/my/monthly', myCompletionsByMonth);
+
+// Admin overview statistics
+router.get('/admin/overview', adminOverview);
 
 export default router;

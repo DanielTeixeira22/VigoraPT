@@ -16,8 +16,10 @@ import {
   Tooltip,
 } from '@chakra-ui/react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useEffect } from 'react';
 import { FiBell, FiCheck, FiExternalLink, FiLogOut, FiMoon, FiSun, FiUser } from 'react-icons/fi';
 import { useAuth } from '../../context/AuthContext';
+import { useSocket } from '../../context/SocketContext';
 import { useThemeMode } from '../../context/ThemeContext';
 import { listNotifications, markNotificationRead, markAllNotificationsRead } from '../../services/notifications';
 import type { Notification } from '../../types/domain';
@@ -77,12 +79,29 @@ const getNotificationMessage = (n: Notification): { title: string; subtitle?: st
 const Topbar = () => {
   const { user, logout } = useAuth();
   const { theme, toggleTheme } = useThemeMode();
+  const { socket } = useSocket();
   const qc = useQueryClient();
+
+  // Listen for real-time notifications via WebSocket
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleNewNotification = () => {
+      // Invalidate and refetch notifications when a new one arrives
+      qc.invalidateQueries({ queryKey: ['notifications'] });
+    };
+
+    socket.on('notification:new', handleNewNotification);
+
+    return () => {
+      socket.off('notification:new', handleNewNotification);
+    };
+  }, [socket, qc]);
 
   const { data: notifications = [] } = useQuery({
     queryKey: ['notifications'],
     queryFn: () => listNotifications(),
-    refetchInterval: 30000, // Poll every 30 seconds
+    refetchInterval: 10000, // Poll every 10 seconds for faster updates
     enabled: Boolean(user),
   });
 

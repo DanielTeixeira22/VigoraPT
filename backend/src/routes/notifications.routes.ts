@@ -10,7 +10,7 @@ router.use(auth);
 // GET /api/notifications?onlyUnread=true
 router.get('/', listMyNotifications);
 
-// POST /api/notifications/read-all (MUST be before /:id/read to match correctly)
+// POST /api/notifications/read-all (deve vir antes de /:id/read para casar corretamente)
 router.post('/read-all', markAllNotificationsRead);
 
 // POST /api/notifications/:id/read

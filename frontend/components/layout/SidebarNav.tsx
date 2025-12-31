@@ -1,3 +1,5 @@
+// UI component: Sidebar Nav.
+
 import { Box, Flex, Heading, Icon, Text, VStack } from '@chakra-ui/react';
 import { NavLink } from 'react-router-dom';
 import { FiActivity, FiBarChart2, FiCalendar, FiHome, FiMessageCircle, FiSettings, FiUsers } from 'react-icons/fi';
@@ -41,6 +43,15 @@ const SidebarNav = () => {
       borderRight="1px solid"
       borderColor="rgba(255,255,255,0.08)"
       p={5}
+      position="sticky"
+      top={0}
+      h="100vh"
+      overflowY="auto"
+      css={{
+        '&::-webkit-scrollbar': { display: 'none' },
+        msOverflowStyle: 'none',
+        scrollbarWidth: 'none',
+      }}
     >
       <Heading size="md" letterSpacing="wide" mb={8} color="white">
         Vigora PT

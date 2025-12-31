@@ -1,3 +1,5 @@
+// API service for Stats.
+
 import { api } from './httpClient';
 
 export interface CompletionSeriePoint {
@@ -24,5 +26,24 @@ export const myCompletionsByWeek = async () => {
 
 export const myCompletionsByMonth = async () => {
   const { data } = await api.get<CompletionSeriePoint[]>('/stats/my/monthly');
+  return data;
+};
+
+/** Admin dashboard overview statistics */
+export interface AdminOverview {
+  totalUsers: number;
+  totalTrainers: number;
+  totalClients: number;
+  pendingApplications: number;
+  totalWorkoutsCompleted: number;
+  totalWorkoutsMissed: number;
+  weeklyActivity: CompletionSeriePoint[];
+  monthlyActivity: CompletionSeriePoint[];
+  monthlyMissed: CompletionSeriePoint[];
+}
+
+/** Fetch admin dashboard overview (ADMIN only) */
+export const getAdminOverview = async (): Promise<AdminOverview> => {
+  const { data } = await api.get<AdminOverview>('/stats/admin/overview');
   return data;
 };

@@ -215,7 +215,7 @@ const TrainingCalendarPage = () => {
         }
       />
 
-      {/* Navegação entre semanas */}
+      {/* Week navigation */}
       <Flex justify="center" align="center" gap={4} mb={6}>
         <IconButton
           aria-label="Semana anterior"
@@ -258,11 +258,11 @@ const TrainingCalendarPage = () => {
         gap={4}
       >
         {dayRange.map((date) => {
-          // Filter sessions by day of week AND ensure date is within plan's date range
+          // Filter by day of week and ensure the date fits the plan window.
           const sessionsForDay = (sessions ?? []).filter((s) => {
             if (s.dayOfWeek !== date.getDay()) return false;
             
-            // Check if date is within plan's startDate and endDate
+            // Ensure date is within the plan start and end.
             if (activePlan?.startDate) {
               const planStart = new Date(activePlan.startDate);
               planStart.setHours(0, 0, 0, 0);
@@ -349,7 +349,7 @@ const TrainingCalendarPage = () => {
                           transition="all 0.3s ease"
                           overflow="hidden"
                         >
-                          {/* Cabeçalho clicável */}
+                          {/* Clickable header */}
                           <Flex
                             p={4}
                             justify="space-between"
@@ -377,7 +377,7 @@ const TrainingCalendarPage = () => {
                             </HStack>
                           </Flex>
 
-                          {/* Conteúdo expansível */}
+                          {/* Expandable content */}
                           <Collapse in={isExpanded} animateOpacity>
                             <Box px={4} pb={4}>
                               <Divider mb={3} />
@@ -470,7 +470,7 @@ const TrainingCalendarPage = () => {
         })}
       </Grid>
 
-      {/* Modal para registar falta */}
+      {/* Modal to log a missed workout */}
       <Modal 
         isOpen={!!targetSession} 
         onClose={() => {
@@ -632,7 +632,7 @@ const TrainingCalendarPage = () => {
         </ModalContent>
       </Modal>
 
-      {/* Modal para concluir treino com métricas */}
+      {/* Modal to complete workout with metrics */}
       <Modal 
         isOpen={!!completionModal} 
         onClose={() => {

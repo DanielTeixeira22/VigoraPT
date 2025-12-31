@@ -15,6 +15,7 @@ interface ProgressChartsProps {
   limit?: number;
 }
 
+// Progress charts for weight and muscle mass.
 const formatDate = (dateString: string) => {
   const date = new Date(dateString);
   return date.toLocaleDateString('pt-PT', { day: '2-digit', month: 'short' });
@@ -52,7 +53,7 @@ const ProgressCharts = ({ limit = 20 }: ProgressChartsProps) => {
     );
   }
 
-  // Sort by date ascending for chart display
+  // Sort by date (ascending) for chart consistency.
   const chartData = [...metrics]
     .sort((a, b) => new Date(a.recordedAt).getTime() - new Date(b.recordedAt).getTime())
     .map((m: BodyMetric) => ({
@@ -62,7 +63,7 @@ const ProgressCharts = ({ limit = 20 }: ProgressChartsProps) => {
       fullDate: new Date(m.recordedAt).toLocaleDateString('pt-PT'),
     }));
 
-  // Get latest values
+  // Get the latest values for highlights.
   const latestWeight = metrics.find(m => m.weight)?.weight;
   const latestMuscleMass = metrics.find(m => m.muscleMass)?.muscleMass;
 
@@ -94,7 +95,7 @@ const ProgressCharts = ({ limit = 20 }: ProgressChartsProps) => {
         )}
       </HStack>
 
-      {/* Weight Chart */}
+      {/* Weight chart */}
       {chartData.some(d => d.weight !== null) && (
         <Box 
           mb={6} 
@@ -143,7 +144,7 @@ const ProgressCharts = ({ limit = 20 }: ProgressChartsProps) => {
         </Box>
       )}
 
-      {/* Muscle Mass Chart */}
+      {/* Muscle mass chart */}
       {chartData.some(d => d.muscleMass !== null) && (
         <Box 
           p={4} 

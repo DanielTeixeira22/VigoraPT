@@ -9,17 +9,6 @@
       "./src/types",
       "./node_modules/@types"
     ],
-    "types": [
-      "node",
-      "express",
-      "cors",
-      "morgan",
-      "multer",
-      "jsonwebtoken",
-      "bcrypt",
-      "http-errors",
-      "swagger-ui-express"
-    ],
     "strict": false,
     "noImplicitAny": false,
     "resolveJsonModule": true,

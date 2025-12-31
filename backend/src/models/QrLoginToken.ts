@@ -1,7 +1,19 @@
+/**
+ * Model: Token QR Login
+ * Tokens para autenticação via QR code.
+ * Fluxo: PENDING → APPROVED/REJECTED → consumido ou EXPIRED.
+ */
+
 import { Schema, model, Types, Model, HydratedDocument } from 'mongoose';
 
+// ============================================================================
+// Tipos
+// ============================================================================
+
+/** QR token states. */
 export type QrLoginStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'EXPIRED';
 
+/** QrLoginToken document. */
 export interface QrLoginToken {
   userId?: Types.ObjectId;
   code: string;
@@ -13,19 +25,28 @@ export interface QrLoginToken {
 
 export type QrLoginTokenDocument = HydratedDocument<QrLoginToken>;
 
+// ============================================================================
+// Schema
+// ============================================================================
+
 const QrLoginTokenSchema = new Schema<QrLoginToken>(
   {
-    userId:    { type: Schema.Types.ObjectId, ref: 'User' }, // fica definido quando aprovado
-    code:      { type: String, required: true, unique: true, index: true }, // valor codificado no QR
-    status:    { type: String, enum: ['PENDING', 'APPROVED', 'REJECTED', 'EXPIRED'], default: 'PENDING', index: true },
-    expiresAt: { type: Date, required: true, index: true }, // TTL via job/cron ou verificação lógica
+    userId: { type: Schema.Types.ObjectId, ref: 'User' },
+    code: { type: String, required: true, unique: true, index: true },
+    status: {
+      type: String,
+      enum: ['PENDING', 'APPROVED', 'REJECTED', 'EXPIRED'],
+      default: 'PENDING',
+      index: true,
+    },
+    expiresAt: { type: Date, required: true, index: true },
   },
   { timestamps: true }
 );
 
-// (opcional) se quiseres TTL automático, usa um índice TTL separado numa coleção própria
-// QrLoginTokenSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
-
-const QrLoginTokenModel: Model<QrLoginToken> = model<QrLoginToken>('QrLoginToken', QrLoginTokenSchema);
+const QrLoginTokenModel: Model<QrLoginToken> = model<QrLoginToken>(
+  'QrLoginToken',
+  QrLoginTokenSchema
+);
 
 export default QrLoginTokenModel;

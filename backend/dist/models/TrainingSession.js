@@ -1,13 +1,20 @@
 "use strict";
+/**
+ * Model: Sessão de Treino
+ * Representa um dia de treino dentro de um plano.
+ * Contém lista de exercícios (máx 10 por sessão).
+ */
 Object.defineProperty(exports, "__esModule", { value: true });
 const mongoose_1 = require("mongoose");
-// Subdocumento: Exercício dentro da sessão
+// ============================================================================
+// Schemas
+// ============================================================================
 const ExerciseSchema = new mongoose_1.Schema({
     name: { type: String, required: true, trim: true },
     sets: { type: Number, required: true, min: 1 },
     reps: { type: Number, required: true, min: 1 },
     notes: { type: String, trim: true },
-    mediaUrl: { type: String }, // link para vídeo/guia do exercício
+    mediaUrl: { type: String },
 }, { _id: true });
 const TrainingSessionSchema = new mongoose_1.Schema({
     planId: {
@@ -18,18 +25,12 @@ const TrainingSessionSchema = new mongoose_1.Schema({
     },
     dayOfWeek: {
         type: Number,
-        enum: [0, 1, 2, 3, 4, 5, 6], // 0=Domingo, 1=Segunda, ... 6=Sábado
+        enum: [0, 1, 2, 3, 4, 5, 6],
         required: true,
         index: true,
     },
-    order: {
-        type: Number,
-        default: 0, // útil para ordenar várias sessões no mesmo dia (se precisares)
-    },
-    notes: {
-        type: String,
-        trim: true,
-    },
+    order: { type: Number, default: 0 },
+    notes: { type: String, trim: true },
     exercises: {
         type: [ExerciseSchema],
         default: [],
@@ -39,17 +40,19 @@ const TrainingSessionSchema = new mongoose_1.Schema({
         ],
     },
 }, { timestamps: true });
-// Índices para consultas rápidas
+// Indexes.
 TrainingSessionSchema.index({ planId: 1, dayOfWeek: 1 });
 TrainingSessionSchema.index({ planId: 1, order: 1 });
-// Sanitize simples (evita strings vazias desnecessárias)
+// Remove strings vazias antes de guardar
 TrainingSessionSchema.pre('save', function (next) {
-    if (typeof this.notes === 'string' && !this.notes.trim())
+    if (typeof this.notes === 'string' && !this.notes.trim()) {
         this.notes = undefined;
+    }
     if (Array.isArray(this.exercises)) {
         this.exercises = this.exercises.map((ex) => {
-            if (typeof ex.notes === 'string' && !ex.notes.trim())
+            if (typeof ex.notes === 'string' && !ex.notes.trim()) {
                 ex.notes = undefined;
+            }
             return ex;
         });
     }

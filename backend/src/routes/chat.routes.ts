@@ -1,3 +1,5 @@
+// Express routes for Chat.routes.
+
 import { Router } from 'express';
 import auth from '../middleware/authMiddleware';
 import { ensureConversation, listConversations, listMessages, sendMessage, markAsRead } from '../controllers/chat.controller';

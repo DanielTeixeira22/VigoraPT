@@ -1,3 +1,5 @@
+// API service for Users.
+
 import { api } from './httpClient';
 import type { Role, User } from '../types/domain';
 

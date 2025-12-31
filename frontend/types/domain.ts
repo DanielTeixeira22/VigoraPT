@@ -1,3 +1,5 @@
+// Domain types.
+
 export type Role = 'ADMIN' | 'TRAINER' | 'CLIENT';
 
 export interface UserProfile {

@@ -1,3 +1,5 @@
+// API service for Plans.
+
 import { api } from './httpClient';
 import type { Paginated, TrainingPlan, TrainingSession, CompletionLog, CompletionStatus } from '../types/domain';
 

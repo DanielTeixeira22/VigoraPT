@@ -18,11 +18,15 @@ export const formatDateTime = (date: string | Date, formatStr = 'dd/MM/yyyy HH:m
 };
 
 /**
- * Normalize a date to only the date portion (no time)
+ * Normalize a date to only the date portion in UTC (no time)
  */
 export const normalizeDateOnly = (date: string | Date): string => {
     const d = typeof date === 'string' ? parseISO(date) : date;
-    return format(d, 'yyyy-MM-dd');
+    // Use UTC to avoid timezone issues with backend
+    const year = d.getUTCFullYear();
+    const month = String(d.getUTCMonth() + 1).padStart(2, '0');
+    const day = String(d.getUTCDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
 };
 
 /**

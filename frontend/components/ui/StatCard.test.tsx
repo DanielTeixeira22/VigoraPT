@@ -1,3 +1,5 @@
+// UI component: Stat Card.test.
+
 import { render, screen } from '@testing-library/react';
 import { ChakraProvider } from '@chakra-ui/react';
 import StatCard from './StatCard';

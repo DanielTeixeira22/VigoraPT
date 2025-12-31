@@ -1,3 +1,5 @@
+// API service for Notifications.
+
 import { api } from './httpClient';
 import type { Notification } from '../types/domain';
 

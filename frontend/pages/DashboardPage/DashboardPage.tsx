@@ -26,12 +26,13 @@ import { FiAlertCircle, FiCalendar, FiMessageCircle, FiImage } from 'react-icons
 import { useQuery } from '@tanstack/react-query';
 import { Bar, BarChart, ResponsiveContainer, Tooltip, XAxis, YAxis, CartesianGrid, Cell } from 'recharts';
 import { useMemo, useState } from 'react';
-import { completionsByMonth, completionsByWeek, myCompletionsByMonth, myCompletionsByWeek, type CompletionSeriePoint } from '../../services/stats';
+import { completionsByMonth, completionsByWeek, myCompletionsByMonth, myCompletionsByWeek, getAdminOverview } from '../../services/stats';
 import { listCompletion } from '../../services/plans';
 import type { ClientProfile, CompletionLog } from '../../types/domain';
 import StatCard from '../../components/ui/StatCard';
 import PageHeader from '../../components/ui/PageHeader';
 import { formatDay } from '../../utils/date';
+import { resolveBackendUrl } from '../../utils/url';
 import { useAuth } from '../../context/AuthContext';
 import { listMyClients, getMyClientProfile } from '../../services/clients';
 import { getMyTrainerProfile } from '../../services/trainers';
@@ -39,7 +40,8 @@ import ProgressCharts from '../../components/charts/ProgressCharts';
 
 type ClientOption = ClientProfile & { userId?: { username?: string } };
 
-// Custom Tooltip Component
+// Dashboard with progress indicators and workout summary.
+// Custom tooltip for charts.
 const CustomTooltip = ({ active, payload, label }: { active?: boolean; payload?: { value: number }[]; label?: string }) => {
   const bg = useColorModeValue('white', '#1a1a2e');
   const border = useColorModeValue('#e2e8f0', '#3a3a50');
@@ -71,7 +73,7 @@ const CompletionChart = ({ data, dataKey }: { data: any[]; dataKey: string }) =>
   const gridColor = useColorModeValue('#f0f0f5', '#2a2a3a');
   const axisColor = useColorModeValue('#a0aec0', '#4a5568');
   
-  // Get max value to highlight it
+  // Determine the max value to highlight the top bar.
   const maxValue = Math.max(...data.map(d => d.totalCompletions));
   
   return (
@@ -132,13 +134,6 @@ const CompletionChart = ({ data, dataKey }: { data: any[]; dataKey: string }) =>
   );
 };
 
-// Helper to resolve avatar URLs
-const resolveAvatarUrl = (url?: string) => {
-  if (!url) return undefined;
-  if (url.startsWith('http')) return url;
-  return `http://localhost:3000${url}`;
-};
-
 const DashboardPage = () => {
   const { user } = useAuth();
   const [selectedClient, setSelectedClient] = useState<string>('');
@@ -164,7 +159,8 @@ const DashboardPage = () => {
         : user?.role === 'TRAINER'
           ? completionsByWeek({ trainerId: trainerProfile?._id })
           : myCompletionsByWeek(),
-    enabled: user?.role !== 'TRAINER' || Boolean(trainerProfile?._id) || Boolean(selectedClient),
+    // Apenas TRAINER ou CLIENT têm stats - ADMIN não tem stats próprias
+    enabled: user?.role === 'CLIENT' || (user?.role === 'TRAINER' && (Boolean(trainerProfile?._id) || Boolean(selectedClient))),
   });
   const { data: monthly } = useQuery({
     queryKey: ['stats', 'monthly', selectedClient],
@@ -174,7 +170,8 @@ const DashboardPage = () => {
         : user?.role === 'TRAINER'
           ? completionsByMonth({ trainerId: trainerProfile?._id })
           : myCompletionsByMonth(),
-    enabled: user?.role !== 'TRAINER' || Boolean(trainerProfile?._id) || Boolean(selectedClient),
+    // Apenas TRAINER ou CLIENT têm stats - ADMIN não tem stats próprias
+    enabled: user?.role === 'CLIENT' || (user?.role === 'TRAINER' && (Boolean(trainerProfile?._id) || Boolean(selectedClient))),
   });
   const { data: clientProfile } = useQuery({
     queryKey: ['client', 'me', 'for-dashboard'],
@@ -191,32 +188,65 @@ const DashboardPage = () => {
     enabled: user?.role === 'CLIENT' ? Boolean(clientProfile?._id) : Boolean(trainerProfile?._id),
   });
 
-  const totalWeekly = useMemo(() => weekly?.reduce((acc, cur) => acc + cur.totalCompletions, 0) ?? 0, [weekly]);
-  const totalMonthly = useMemo(() => monthly?.reduce((acc, cur) => acc + cur.totalCompletions, 0) ?? 0, [monthly]);
+  // Admin-specific stats
+  const { data: adminStats } = useQuery({
+    queryKey: ['stats', 'admin', 'overview'],
+    queryFn: getAdminOverview,
+    enabled: user?.role === 'ADMIN',
+  });
 
-  // Format weekly data for chart display
+  // Calculate totals based on role
+  const totalWeekly = useMemo(() => {
+    if (user?.role === 'ADMIN' && adminStats) {
+      return adminStats.weeklyActivity.reduce((acc, cur) => acc + cur.totalCompletions, 0);
+    }
+    return weekly?.reduce((acc, cur) => acc + cur.totalCompletions, 0) ?? 0;
+  }, [weekly, adminStats, user?.role]);
+
+  const totalMonthly = useMemo(() => {
+    if (user?.role === 'ADMIN' && adminStats) {
+      return adminStats.monthlyActivity.reduce((acc, cur) => acc + cur.totalCompletions, 0);
+    }
+    return monthly?.reduce((acc, cur) => acc + cur.totalCompletions, 0) ?? 0;
+  }, [monthly, adminStats, user?.role]);
+
+  // Format weekly data for the chart.
   const formattedWeekly = useMemo(() => {
-    if (!weekly) return [];
-    // Sort by year+week and format label
-    return [...weekly]
+    const data = user?.role === 'ADMIN' && adminStats ? adminStats.weeklyActivity : weekly;
+    if (!data) return [];
+    // Sort by year+week and format the label.
+    return [...data]
       .sort((a, b) => (a.year * 100 + (a.week || 0)) - (b.year * 100 + (b.week || 0)))
       .map(d => ({
         ...d,
         week: `Sem ${d.week}`,
       }));
-  }, [weekly]);
+  }, [weekly, adminStats, user?.role]);
 
-  // Format monthly data for chart display
+  // Format monthly data for the chart.
   const formattedMonthly = useMemo(() => {
-    if (!monthly) return [];
+    const data = user?.role === 'ADMIN' && adminStats ? adminStats.monthlyActivity : monthly;
+    if (!data) return [];
     const monthNames = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
-    return [...monthly]
+    return [...data]
       .sort((a, b) => (a.year * 100 + (a.month || 0)) - (b.year * 100 + (b.month || 0)))
       .map(d => ({
         ...d,
         month: monthNames[(d.month || 1) - 1],
       }));
-  }, [monthly]);
+  }, [monthly, adminStats, user?.role]);
+
+  // Format monthly missed data for admin chart.
+  const formattedMonthlyMissed = useMemo(() => {
+    if (user?.role !== 'ADMIN' || !adminStats?.monthlyMissed) return [];
+    const monthNames = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+    return [...adminStats.monthlyMissed]
+      .sort((a, b) => (a.year * 100 + (a.month || 0)) - (b.year * 100 + (b.month || 0)))
+      .map(d => ({
+        ...d,
+        month: monthNames[(d.month || 1) - 1],
+      }));
+  }, [adminStats, user?.role]);
 
   return (
     <Box>
@@ -245,15 +275,66 @@ const DashboardPage = () => {
         }
       />
 
-      <SimpleGrid columns={{ base: 1, md: 3 }} spacing={4} mb={8}>
-        <StatCard label="Total semanal" value={totalWeekly} helper="Treinos concluídos esta semana" />
-        <StatCard label="Total mensal" value={totalMonthly} helper="Treinos concluídos este mês" />
-        <StatCard
-          label="Falhas recentes"
-          value={missed?.items?.length ?? 0}
-          helper="Últimos registos de falta"
-        />
-      </SimpleGrid>
+      {/* Admin-specific KPIs */}
+      {user?.role === 'ADMIN' && adminStats && (
+        <>
+          <SimpleGrid columns={{ base: 2, md: 4 }} spacing={4} mb={8}>
+            <StatCard 
+              label="Total Utilizadores" 
+              value={adminStats.totalUsers} 
+              helper="Registados na plataforma"
+            />
+            <StatCard 
+              label="Trainers Ativos" 
+              value={adminStats.totalTrainers} 
+              helper="Trainers aprovados"
+            />
+            <StatCard 
+              label="Clientes" 
+              value={adminStats.totalClients} 
+              helper="Clientes registados"
+            />
+            <StatCard 
+              label="Pedidos Pendentes" 
+              value={adminStats.pendingApplications} 
+              helper="Aguardam aprovação"
+            />
+          </SimpleGrid>
+          <SimpleGrid columns={{ base: 1, md: 3 }} spacing={4} mb={8}>
+            <StatCard 
+              label="Treinos Concluídos" 
+              value={adminStats.totalWorkoutsCompleted} 
+              helper="Total global de treinos"
+            />
+            <StatCard 
+              label="Treinos Falhados" 
+              value={adminStats.totalWorkoutsMissed} 
+              helper="Total global de faltas"
+            />
+            <StatCard 
+              label="Taxa de Sucesso" 
+              value={adminStats.totalWorkoutsCompleted + adminStats.totalWorkoutsMissed > 0 
+                ? `${Math.round((adminStats.totalWorkoutsCompleted / (adminStats.totalWorkoutsCompleted + adminStats.totalWorkoutsMissed)) * 100)}%`
+                : '—'
+              } 
+              helper="Treinos concluídos vs falhados"
+            />
+          </SimpleGrid>
+        </>
+      )}
+
+      {/* Client/Trainer KPIs */}
+      {user?.role !== 'ADMIN' && (
+        <SimpleGrid columns={{ base: 1, md: 3 }} spacing={4} mb={8}>
+          <StatCard label="Total semanal" value={totalWeekly} helper="Treinos concluídos esta semana" />
+          <StatCard label="Total mensal" value={totalMonthly} helper="Treinos concluídos este mês" />
+          <StatCard
+            label="Falhas recentes"
+            value={missed?.items?.length ?? 0}
+            helper="Últimos registos de falta"
+          />
+        </SimpleGrid>
+      )}
 
       <Grid templateColumns={{ base: '1fr', lg: '2fr 1fr' }} gap={6}>
         <GridItem>
@@ -286,7 +367,40 @@ const DashboardPage = () => {
         </Box>
       )}
 
-      <Box mt={8} bg="card" border="1px solid" borderColor="border" borderRadius="16px" p={5}>
+      {/* Missed workouts chart for Admin */}
+      {user?.role === 'ADMIN' && adminStats && (
+        <Box mt={8}>
+          <Heading size="md" mb={3}>
+            📉 Evolução de Faltas Mensais
+          </Heading>
+          <Box bg="card" border="1px solid" borderColor="border" borderRadius="16px" p={4}>
+            {formattedMonthlyMissed.length > 0 ? (
+              <ResponsiveContainer width="100%" height={250}>
+                <BarChart data={formattedMonthlyMissed} margin={{ top: 20, right: 20, left: -10, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+                  <XAxis dataKey="month" />
+                  <YAxis allowDecimals={false} />
+                  <Tooltip content={<CustomTooltip />} />
+                  <Bar dataKey="totalCompletions" name="Faltas" radius={[8, 8, 0, 0]} maxBarSize={50}>
+                    {formattedMonthlyMissed.map((_, index) => (
+                      <Cell key={`cell-missed-${index}`} fill="#E53E3E" />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <Flex direction="column" align="center" justify="center" py={8} color="gray.400">
+                <Text fontWeight={500}>Sem faltas registadas</Text>
+                <Text fontSize="sm">Excelente! Nenhum treino falhado. 🎉</Text>
+              </Flex>
+            )}
+          </Box>
+        </Box>
+      )}
+
+      {/* Faltas recentes - only for CLIENT and TRAINER */}
+      {user?.role !== 'ADMIN' && (
+        <Box mt={8} bg="card" border="1px solid" borderColor="border" borderRadius="16px" p={5}>
         <Flex align="center" gap={2} mb={4}>
           <Icon as={FiAlertCircle} color="orange.400" boxSize={5} />
           <Heading size="md">Faltas recentes</Heading>
@@ -312,7 +426,7 @@ const DashboardPage = () => {
         ) : (
           <Stack spacing={3}>
             {(missed?.items ?? []).map((log: CompletionLog) => {
-              // Find client info if trainer
+              // Get client info when the user is a trainer.
               const clientInfo = myClients?.find((c: ClientOption) => c._id === log.clientId);
               const clientUser = clientInfo?.userId as { username?: string; profile?: { firstName?: string; lastName?: string; avatarUrl?: string } } | undefined;
               
@@ -340,7 +454,7 @@ const DashboardPage = () => {
                         <Avatar 
                           size="sm" 
                           name={clientUser.profile?.firstName || clientUser.username}
-                          src={resolveAvatarUrl(clientUser.profile?.avatarUrl)}
+                          src={resolveBackendUrl(clientUser.profile?.avatarUrl)}
                         />
                       )}
                       <VStack align="flex-start" spacing={0}>
@@ -375,9 +489,10 @@ const DashboardPage = () => {
                 </Box>
               );
             })}
-          </Stack>
+        </Stack>
         )}
       </Box>
+      )}
 
       {/* Modal for missed workout details */}
       <Modal isOpen={!!selectedMiss} onClose={() => setSelectedMiss(null)} size="lg" isCentered>
@@ -415,7 +530,7 @@ const DashboardPage = () => {
                         <Avatar 
                           size="md" 
                           name={clientUser.profile?.firstName || clientUser.username}
-                          src={resolveAvatarUrl(clientUser.profile?.avatarUrl)}
+                          src={resolveBackendUrl(clientUser.profile?.avatarUrl)}
                         />
                         <Box>
                           <Text fontSize="sm" color="gray.500">Cliente</Text>
@@ -439,7 +554,7 @@ const DashboardPage = () => {
                   </HStack>
                 </Box>
 
-                {/* Proof image */}
+                {/* Proof */}
                 {selectedMiss.proofImage && (
                   <Box>
                     <HStack spacing={2} mb={2}>
@@ -447,7 +562,7 @@ const DashboardPage = () => {
                       <Text fontSize="sm" color="gray.500">Comprovativo</Text>
                     </HStack>
                     <Image 
-                      src={selectedMiss.proofImage.startsWith('/') ? `http://localhost:3000${selectedMiss.proofImage}` : selectedMiss.proofImage}
+                      src={resolveBackendUrl(selectedMiss.proofImage) ?? selectedMiss.proofImage}
                       alt="Comprovativo"
                       borderRadius="12px"
                       maxH="300px"

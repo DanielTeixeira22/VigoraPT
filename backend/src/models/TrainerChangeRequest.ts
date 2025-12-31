@@ -1,7 +1,19 @@
+/**
+ * Model: Pedido de Mudança de Treinador
+ * Cliente solicita mudar para outro trainer.
+ * Admin decide (APPROVED/REJECTED).
+ */
+
 import { Schema, model, Types, Model, CallbackWithoutResultAndOptionalError, HydratedDocument } from 'mongoose';
 
+// ============================================================================
+// Tipos
+// ============================================================================
+
+/** Request states. */
 export type TrainerChangeStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
 
+/** TrainerChangeRequest document. */
 export interface TrainerChangeRequest {
   clientId: Types.ObjectId;
   currentTrainerId?: Types.ObjectId;
@@ -16,33 +28,60 @@ export interface TrainerChangeRequest {
 
 export type TrainerChangeRequestDocument = HydratedDocument<TrainerChangeRequest>;
 
+// ============================================================================
+// Schema
+// ============================================================================
+
 const TrainerChangeRequestSchema = new Schema<TrainerChangeRequest>(
   {
-    clientId:           { type: Schema.Types.ObjectId, ref: 'ClientProfile', required: true, index: true },
-    currentTrainerId:   { type: Schema.Types.ObjectId, ref: 'TrainerProfile' },
-    requestedTrainerId: { type: Schema.Types.ObjectId, ref: 'TrainerProfile', required: true },
-    reason:             { type: String, trim: true },
-    status:             { type: String, enum: ['PENDING', 'APPROVED', 'REJECTED'], default: 'PENDING', index: true },
-    decidedByAdminId:   { type: Schema.Types.ObjectId, ref: 'User' },
-    decidedAt:          { type: Date },
+    clientId: {
+      type: Schema.Types.ObjectId,
+      ref: 'ClientProfile',
+      required: true,
+      index: true,
+    },
+    currentTrainerId: { type: Schema.Types.ObjectId, ref: 'TrainerProfile' },
+    requestedTrainerId: {
+      type: Schema.Types.ObjectId,
+      ref: 'TrainerProfile',
+      required: true,
+    },
+    reason: { type: String, trim: true },
+    status: {
+      type: String,
+      enum: ['PENDING', 'APPROVED', 'REJECTED'],
+      default: 'PENDING',
+      index: true,
+    },
+    decidedByAdminId: { type: Schema.Types.ObjectId, ref: 'User' },
+    decidedAt: { type: Date },
   },
   { timestamps: true }
 );
 
-// Índices para listagens/aprovação
 TrainerChangeRequestSchema.index({ createdAt: -1 });
 TrainerChangeRequestSchema.index({ clientId: 1, status: 1 });
 
-// Valida que não se pede mudança para o mesmo trainer
-TrainerChangeRequestSchema.pre('validate', function (this: TrainerChangeRequestDocument, next: CallbackWithoutResultAndOptionalError) {
-  if (this.currentTrainerId && this.requestedTrainerId && this.currentTrainerId.equals(this.requestedTrainerId)) {
+// Prevents requesting a change to the same trainer.
+TrainerChangeRequestSchema.pre('validate', function (
+  this: TrainerChangeRequestDocument,
+  next: CallbackWithoutResultAndOptionalError
+) {
+  if (
+    this.currentTrainerId &&
+    this.requestedTrainerId &&
+    this.currentTrainerId.equals(this.requestedTrainerId)
+  ) {
     return next(new Error('O treinador pedido é igual ao atual.'));
   }
   next();
 });
 
-// Quando o admin decide, preenche decidedAt (se ainda não existir)
-TrainerChangeRequestSchema.pre('save', function (this: TrainerChangeRequestDocument, next: CallbackWithoutResultAndOptionalError) {
+// Preenche decidedAt automaticamente
+TrainerChangeRequestSchema.pre('save', function (
+  this: TrainerChangeRequestDocument,
+  next: CallbackWithoutResultAndOptionalError
+) {
   const decided = this.status === 'APPROVED' || this.status === 'REJECTED';
   if (this.isModified('status') && decided && !this.decidedAt) {
     this.decidedAt = new Date();
@@ -50,6 +89,9 @@ TrainerChangeRequestSchema.pre('save', function (this: TrainerChangeRequestDocum
   next();
 });
 
-const TrainerChangeRequestModel: Model<TrainerChangeRequest> = model<TrainerChangeRequest>('TrainerChangeRequest', TrainerChangeRequestSchema);
+const TrainerChangeRequestModel: Model<TrainerChangeRequest> = model<TrainerChangeRequest>(
+  'TrainerChangeRequest',
+  TrainerChangeRequestSchema
+);
 
 export default TrainerChangeRequestModel;

@@ -1,3 +1,5 @@
+// API service for Uploads.
+
 import { api } from './httpClient';
 import type { AxiosRequestConfig } from 'axios';
 

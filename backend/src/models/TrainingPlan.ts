@@ -1,11 +1,25 @@
+/**
+ * Model: Plano de Treino
+ * Define um plano semanal para um cliente com frequência de 3-5 dias.
+ * Criado por um trainer validado.
+ */
+
 import { Schema, model, Types, Model, HydratedDocument } from 'mongoose';
 
+// ============================================================================
+// Tipos
+// ============================================================================
+
+/** Allowed weekly frequency. */
+export type WeeklyFrequency = 3 | 4 | 5;
+
+/** TrainingPlan document. */
 export interface TrainingPlan {
   clientId: Types.ObjectId;
   trainerId: Types.ObjectId;
   title: string;
   description?: string;
-  frequencyPerWeek: 3 | 4 | 5;
+  frequencyPerWeek: WeeklyFrequency;
   startDate: Date;
   endDate?: Date;
   createdAt: Date;
@@ -13,6 +27,10 @@ export interface TrainingPlan {
 }
 
 export type TrainingPlanDocument = HydratedDocument<TrainingPlan>;
+
+// ============================================================================
+// Schema
+// ============================================================================
 
 const TrainingPlanSchema = new Schema<TrainingPlan>(
   {
@@ -28,35 +46,26 @@ const TrainingPlanSchema = new Schema<TrainingPlan>(
       required: true,
       index: true,
     },
-    title: {
-      type: String,
-      required: true,
-      trim: true,
-    },
-    description: {
-      type: String,
-      trim: true,
-    },
+    title: { type: String, required: true, trim: true },
+    description: { type: String, trim: true },
     frequencyPerWeek: {
       type: Number,
-      enum: [3, 4, 5], // Requisito do PDF: plano com 3, 4 ou 5 dias por semana
+      enum: [3, 4, 5],
       required: true,
     },
-    startDate: {
-      type: Date,
-      required: true,
-    },
-    endDate: {
-      type: Date,
-    },
+    startDate: { type: Date, required: true },
+    endDate: { type: Date },
   },
   { timestamps: true }
 );
 
-// Índices úteis para listagens
+// Indexes for listings.
 TrainingPlanSchema.index({ clientId: 1, createdAt: -1 });
 TrainingPlanSchema.index({ trainerId: 1, createdAt: -1 });
 
-const TrainingPlanModel: Model<TrainingPlan> = model<TrainingPlan>('TrainingPlan', TrainingPlanSchema);
+const TrainingPlanModel: Model<TrainingPlan> = model<TrainingPlan>(
+  'TrainingPlan',
+  TrainingPlanSchema
+);
 
 export default TrainingPlanModel;

@@ -1,6 +1,17 @@
+/**
+ * Model: Mensagem
+ * Mensagens individuais dentro de uma conversa.
+ * Atualiza automaticamente lastMessageAt na conversa.
+ */
+
 import { Schema, model, Types, Model, CallbackWithoutResultAndOptionalError, HydratedDocument } from 'mongoose';
 import Conversation from './Conversation';
 
+// ============================================================================
+// Tipos
+// ============================================================================
+
+/** Message document. */
 export interface Message {
   conversationId: Types.ObjectId;
   senderId: Types.ObjectId;
@@ -12,6 +23,10 @@ export interface Message {
 }
 
 export type MessageDocument = HydratedDocument<Message>;
+
+// ============================================================================
+// Schema
+// ============================================================================
 
 const MessageSchema = new Schema<Message>(
   {
@@ -27,39 +42,28 @@ const MessageSchema = new Schema<Message>(
       required: true,
       index: true,
     },
-    content: {
-      type: String,
-      required: true,
-      trim: true,
-    },
-    attachments: {
-      type: [String], // URLs de ficheiros (opcional)
-      default: [],
-    },
-    readAt: {
-      type: Date, // preenchido quando o destinatário lê
-    },
+    content: { type: String, required: true, trim: true },
+    attachments: { type: [String], default: [] },
+    readAt: { type: Date },
   },
   { timestamps: true }
 );
 
-// Ordenação eficiente por data dentro da conversa
 MessageSchema.index({ conversationId: 1, createdAt: 1 });
 
-// Após gravar uma mensagem, atualiza dados de listagem na conversa
-MessageSchema.post('save', async function docSaved(message: Message, next: CallbackWithoutResultAndOptionalError) {
+// Update conversation after saving message.
+MessageSchema.post('save', async function docSaved(
+  message: Message,
+  next: CallbackWithoutResultAndOptionalError
+) {
   try {
-    await Conversation.findByIdAndUpdate(
-      message.conversationId,
-      {
-        $set: {
-          lastMessageAt: message.createdAt,
-          lastMessageText: message.content?.slice(0, 200) || '',
-        },
-        $currentDate: { updatedAt: true },
+    await Conversation.findByIdAndUpdate(message.conversationId, {
+      $set: {
+        lastMessageAt: message.createdAt,
+        lastMessageText: message.content?.slice(0, 200) || '',
       },
-      { new: false }
-    );
+      $currentDate: { updatedAt: true },
+    });
     next();
   } catch (err) {
     next(err as Error);

@@ -11,7 +11,7 @@ const client_controller_2 = require("../controllers/client.controller");
 const client_controller_3 = require("../controllers/client.controller");
 const router = (0, express_1.Router)();
 router.use(authMiddleware_1.default);
-// CLIENTE
+// CLIENT
 router.get('/me', (0, requireRole_1.default)('CLIENT'), client_controller_1.getMyProfile);
 router.put('/me', (0, requireRole_1.default)('CLIENT'), client_controller_1.updateMyProfile);
 // TRAINER

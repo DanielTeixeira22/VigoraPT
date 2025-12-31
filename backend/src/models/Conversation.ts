@@ -1,5 +1,16 @@
+/**
+ * Model: Conversa
+ * Chat entre cliente e treinador.
+ * Sempre 2 participantes por conversa.
+ */
+
 import { Schema, model, Types, Model, HydratedDocument } from 'mongoose';
 
+// ============================================================================
+// Tipos
+// ============================================================================
+
+/** Conversation document. */
 export interface Conversation {
   participants: Types.ObjectId[];
   clientId?: Types.ObjectId;
@@ -13,36 +24,40 @@ export interface Conversation {
 
 export type ConversationDocument = HydratedDocument<Conversation>;
 
+// ============================================================================
+// Schema
+// ============================================================================
+
 const ConversationSchema = new Schema<Conversation>(
   {
-    // 2 participantes: cliente e treinador (referenciam User)
     participants: {
       type: [{ type: Schema.Types.ObjectId, ref: 'User', required: true }],
-      validate: [(arr) => Array.isArray(arr) && arr.length === 2, 'A conversa deve ter exatamente 2 participantes.'],
+      validate: [
+        (arr: Types.ObjectId[]) => Array.isArray(arr) && arr.length === 2,
+        'A conversa deve ter exatamente 2 participantes.',
+      ],
       index: true,
     },
-
-    // Ajuda nas queries por pares cliente↔treinador
-    clientId:  { type: Schema.Types.ObjectId, ref: 'ClientProfile',  index: true },
+    clientId: { type: Schema.Types.ObjectId, ref: 'ClientProfile', index: true },
     trainerId: { type: Schema.Types.ObjectId, ref: 'TrainerProfile', index: true },
-
-    // Última mensagem (para listagens)
-    lastMessageAt:   { type: Date },
+    lastMessageAt: { type: Date },
     lastMessageText: { type: String, trim: true },
-
-    // Arquivo por utilizador (opcional)
-    isArchivedBy: { type: [{ type: Schema.Types.ObjectId, ref: 'User' }], default: [] },
+    isArchivedBy: {
+      type: [{ type: Schema.Types.ObjectId, ref: 'User' }],
+      default: [],
+    },
   },
   { timestamps: true }
 );
 
-// Um par clientId+trainerId deve ter uma única conversa (quando definidos)
+// Unique client+trainer pair.
 ConversationSchema.index({ clientId: 1, trainerId: 1 }, { unique: true, sparse: true });
-
-// Listagens recentes
 ConversationSchema.index({ updatedAt: -1 });
 ConversationSchema.index({ lastMessageAt: -1 });
 
-const ConversationModel: Model<Conversation> = model<Conversation>('Conversation', ConversationSchema);
+const ConversationModel: Model<Conversation> = model<Conversation>(
+  'Conversation',
+  ConversationSchema
+);
 
 export default ConversationModel;

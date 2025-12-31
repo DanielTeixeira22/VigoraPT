@@ -4,26 +4,31 @@ import AppLayout from '../components/layout/AppLayout';
 
 // Pages
 import AuthPage from '../pages/AuthPage/AuthPage';
+import ForgotPasswordPage from '../pages/AuthPage/ForgotPasswordPage';
+import ResetPasswordPage from '../pages/AuthPage/ResetPasswordPage';
 import DashboardPage from '../pages/DashboardPage/DashboardPage';
 import ProfilePage from '../pages/ProfilePage/ProfilePage';
 import PlansPage from '../pages/PlansPage/PlansPage';
 import TrainingCalendarPage from '../pages/TrainingCalendarPage/TrainingCalendarPage';
 import TrainerDirectoryPage from '../pages/TrainerDirectoryPage/TrainerDirectoryPage';
 import MyClientsPage from '../pages/MyClientsPage/MyClientsPage';
-import ChatPage from '../pages/ChatPage/ChatSPage';
+import ChatPage from '../pages/ChatPage/ChatPage';
 import AdminPage from '../pages/AdminPage/AdminPage';
 import Homepage from '../pages/Homepage/Homepage';
 
 import SessionDetailsPage from '../pages/SessionDetailsPage/SessionDetailsPage';
 
+// Central route map with role-based protection.
 const AppRoutes = () => {
   return (
     <Routes>
-      {/* Auth routes - login and register with sliding animation */}
+      {/* Auth routes - login and register with custom transition */}
       <Route path="/login" element={<AuthPage />} />
       <Route path="/register" element={<AuthPage />} />
+      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+      <Route path="/reset-password" element={<ResetPasswordPage />} />
 
-      {/* Routes accessible to all authenticated users */}
+      {/* Routes available to authenticated users */}
       <Route
         element={
           <PrivateRoute>
@@ -63,7 +68,7 @@ const AppRoutes = () => {
         <Route path="/trainings/:sessionId" element={<SessionDetailsPage />} />
       </Route>
 
-      {/* Admin route with AppLayout */}
+      {/* Admin-only routes with shared layout */}
       <Route
         element={
           <PrivateRoute allowedRoles={['ADMIN']}>

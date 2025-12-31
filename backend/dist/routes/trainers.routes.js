@@ -9,7 +9,7 @@ const authMiddleware_1 = __importDefault(require("../middleware/authMiddleware")
 const requireRole_1 = __importDefault(require("../middleware/requireRole"));
 const trainer_controller_2 = require("../controllers/trainer.controller");
 const router = (0, express_1.Router)();
-// rota pública (listagem)
+// Public route (listing).
 router.get('/public', trainer_controller_2.listPublicTrainers);
 router.use(authMiddleware_1.default);
 router.get('/me', (0, requireRole_1.default)('TRAINER'), trainer_controller_1.getMyProfile);

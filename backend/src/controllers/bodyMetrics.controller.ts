@@ -1,43 +1,121 @@
+/**
+ * Body Metrics Controller
+ * 
+ * Handles body measurement tracking including:
+ * - Recording weight and muscle mass
+ * - Retrieving metric history
+ * - Getting current metric values
+ * 
+ * @module controllers/bodyMetrics
+ */
+
 import { Request, Response, NextFunction } from 'express';
+import createError from 'http-errors';
 import BodyMetric from '../models/BodyMetric';
 import ClientProfile from '../models/ClientProfile';
 
-// GET /api/body-metrics
-export const listMyMetrics = async (req: Request, res: Response, next: NextFunction) => {
-    try {
-        if (!req.user) return res.status(401).json({ message: 'Não autenticado.' });
+// ============================================================================
+// Types & Interfaces
+// ============================================================================
 
-        const { limit = 30 } = req.query;
+/** Payload for recording a body metric */
+interface RecordMetricPayload {
+    weight?: number;
+    muscleMass?: number;
+    completionLogId?: string;
+}
 
-        const metrics = await BodyMetric
-            .find({ userId: req.user._id })
-            .sort({ recordedAt: -1 })
-            .limit(Number(limit));
+/** Current metrics response structure */
+interface CurrentMetricsResponse {
+    currentWeight: number | null;
+    currentMuscleMass: number | null;
+}
 
-        res.json(metrics);
-    } catch (err) {
-        next(err);
+// ============================================================================
+// Funcoes auxiliares
+// ============================================================================
+
+/**
+ * Validates that the request has an authenticated user.
+ * 
+ * @param req - Express request object
+ * @throws {HttpError} 401 if user is not authenticated
+ */
+const requireAuth = (req: Request): void => {
+    if (!req.user) {
+        throw createError(401, 'Autenticação requerida.');
     }
 };
 
-// POST /api/body-metrics
-export const recordMetric = async (req: Request, res: Response, next: NextFunction) => {
-    try {
-        if (!req.user) return res.status(401).json({ message: 'Não autenticado.' });
+// ============================================================================
+// Metric Endpoints
+// ============================================================================
 
-        const { weight, muscleMass, completionLogId } = req.body as {
-            weight?: number;
-            muscleMass?: number;
-            completionLogId?: string;
-        };
+/**
+ * Lists body metrics for the authenticated user.
+ * 
+ * @route GET /api/body-metrics
+ * @access Private
+ * 
+ * @param req - Express request with optional limit query param
+ * @param res - Express response
+ * @param next - Express next function
+ * 
+ * @returns {BodyMetric[]} Array of body metrics sorted by date
+ * @throws {HttpError} 401 if not authenticated
+ */
+export const listMyMetrics = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+): Promise<void> => {
+    try {
+        requireAuth(req);
+
+        const limit = Number(req.query.limit) || 30;
+
+        const metrics = await BodyMetric.find({ userId: req.user!._id })
+            .sort({ recordedAt: -1 })
+            .limit(limit);
+
+        res.json(metrics);
+    } catch (error) {
+        next(error);
+    }
+};
+
+/**
+ * Records a new body metric measurement.
+ * Updates current values in client profile.
+ * 
+ * @route POST /api/body-metrics
+ * @access Private
+ * 
+ * @param req - Express request with metric data
+ * @param res - Express response
+ * @param next - Express next function
+ * 
+ * @returns {BodyMetric} The created metric record
+ * @throws {HttpError} 400 if no metric values provided
+ * @throws {HttpError} 401 if not authenticated
+ */
+export const recordMetric = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+): Promise<void> => {
+    try {
+        requireAuth(req);
+
+        const { weight, muscleMass, completionLogId } = req.body as RecordMetricPayload;
 
         if (weight === undefined && muscleMass === undefined) {
-            return res.status(400).json({ message: 'Pelo menos peso ou massa muscular deve ser fornecido.' });
+            throw createError(400, 'Pelo menos peso ou massa muscular deve ser fornecido.');
         }
 
         // Create metric record
         const metric = await BodyMetric.create({
-            userId: req.user._id,
+            userId: req.user!._id,
             weight,
             muscleMass,
             completionLogId: completionLogId || undefined,
@@ -50,33 +128,50 @@ export const recordMetric = async (req: Request, res: Response, next: NextFuncti
         if (muscleMass !== undefined) updateData.currentMuscleMass = muscleMass;
 
         await ClientProfile.findOneAndUpdate(
-            { userId: req.user._id },
+            { userId: req.user!._id },
             { $set: updateData }
         );
 
         res.status(201).json(metric);
-    } catch (err) {
-        next(err);
+    } catch (error) {
+        next(error);
     }
 };
 
-// GET /api/body-metrics/current
-export const getCurrentMetrics = async (req: Request, res: Response, next: NextFunction) => {
+/**
+ * Gets current body metrics for the authenticated user.
+ * 
+ * @route GET /api/body-metrics/current
+ * @access Private
+ * 
+ * @param req - Express request with authenticated user
+ * @param res - Express response
+ * @param next - Express next function
+ * 
+ * @returns {CurrentMetricsResponse} Current weight and muscle mass values
+ * @throws {HttpError} 401 if not authenticated
+ */
+export const getCurrentMetrics = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+): Promise<void> => {
     try {
-        if (!req.user) return res.status(401).json({ message: 'Não autenticado.' });
+        requireAuth(req);
 
-        const clientProfile = await ClientProfile.findOne({ userId: req.user._id })
+        const clientProfile = await ClientProfile.findOne({ userId: req.user!._id })
             .select('currentWeight currentMuscleMass');
 
         if (!clientProfile) {
-            return res.json({ currentWeight: null, currentMuscleMass: null });
+            res.json({ currentWeight: null, currentMuscleMass: null } as CurrentMetricsResponse);
+            return;
         }
 
         res.json({
             currentWeight: clientProfile.currentWeight ?? null,
             currentMuscleMass: clientProfile.currentMuscleMass ?? null,
-        });
-    } catch (err) {
-        next(err);
+        } as CurrentMetricsResponse);
+    } catch (error) {
+        next(error);
     }
 };

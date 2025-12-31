@@ -1,3 +1,5 @@
+// Utilities for Token Storage.
+
 const TOKEN_KEY = 'vigora_access_token';
 const REFRESH_KEY = 'vigora_refresh_token';
 export const AUTH_CLEARED_EVENT = 'vigora:auth-cleared';

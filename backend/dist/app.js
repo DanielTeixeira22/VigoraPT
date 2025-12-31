@@ -21,6 +21,7 @@ const trainer_change_routes_1 = __importDefault(require("./routes/trainer-change
 const notifications_routes_1 = __importDefault(require("./routes/notifications.routes"));
 const stats_routes_1 = __importDefault(require("./routes/stats.routes"));
 const bodyMetrics_routes_1 = __importDefault(require("./routes/bodyMetrics.routes"));
+// Express setup: global middleware, routes, and docs.
 const app = (0, express_1.default)();
 app.use((0, cors_1.default)());
 app.use(express_1.default.json());
@@ -41,7 +42,8 @@ catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     console.error('Erro ao carregar swagger.json:', message);
 }
-app.use('/api/auth/qr', qr_routes_1.default); // Must be before /api/auth to match correctly
+// QR login must be registered before /api/auth to avoid route conflicts.
+app.use('/api/auth/qr', qr_routes_1.default);
 app.use('/api/auth', auth_routes_1.default);
 app.use('/api/uploads', uploads_routes_1.default);
 app.use('/api/chat', chat_routes_1.default);

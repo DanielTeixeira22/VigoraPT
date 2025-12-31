@@ -1,3 +1,5 @@
+// UI component: Page Header.
+
 import { Flex, Heading, HStack, Text } from '@chakra-ui/react';
 import type { ReactNode } from 'react';
 

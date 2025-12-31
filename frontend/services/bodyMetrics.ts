@@ -1,3 +1,5 @@
+// API service for Body Metrics.
+
 import { api } from './httpClient';
 
 export interface BodyMetric {

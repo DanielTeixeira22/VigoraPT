@@ -44,7 +44,7 @@ import type { TrainingPlan, TrainingSession, ClientProfile } from '../../types/d
 import PageHeader from '../../components/ui/PageHeader';
 import { weekdayLabels } from '../../utils/date';
 
-// Lista de exercícios predefinidos para o dropdown
+// Preset exercise list for the dropdown.
 const exerciseOptions = [
   // Peito
   { value: 'Supino reto', label: 'Supino reto', group: 'Peito' },
@@ -70,13 +70,13 @@ const exerciseOptions = [
   { value: 'Elevação posterior', label: 'Elevação posterior', group: 'Ombros' },
   { value: 'Arnold press', label: 'Arnold press', group: 'Ombros' },
   { value: 'Encolhimentos', label: 'Encolhimentos', group: 'Ombros' },
-  // Bíceps
+  // Biceps
   { value: 'Rosca direta', label: 'Rosca direta', group: 'Bíceps' },
   { value: 'Rosca alternada', label: 'Rosca alternada', group: 'Bíceps' },
   { value: 'Rosca martelo', label: 'Rosca martelo', group: 'Bíceps' },
   { value: 'Rosca concentrada', label: 'Rosca concentrada', group: 'Bíceps' },
   { value: 'Rosca scott', label: 'Rosca scott', group: 'Bíceps' },
-  // Tríceps
+  // Triceps
   { value: 'Tríceps na polia', label: 'Tríceps na polia', group: 'Tríceps' },
   { value: 'Tríceps testa', label: 'Tríceps testa', group: 'Tríceps' },
   { value: 'Tríceps francês', label: 'Tríceps francês', group: 'Tríceps' },
@@ -111,7 +111,7 @@ const exerciseOptions = [
   { value: 'HIIT', label: 'HIIT', group: 'Cardio' },
 ];
 
-// Agrupar exercícios por grupo muscular
+// Group exercises by muscle group.
 const exerciseGroups = exerciseOptions.reduce((acc, ex) => {
   if (!acc[ex.group]) acc[ex.group] = [];
   acc[ex.group].push(ex);
@@ -328,7 +328,7 @@ const PlansPage = () => {
         </TabList>
 
         <TabPanels>
-          {/* TAB 1: PLANOS */}
+          {/* TAB 1: PLANS */}
           <TabPanel px={0}>
             <Box mb={4}>
               <Button
@@ -380,7 +380,7 @@ const PlansPage = () => {
               </Card>
             </Collapse>
 
-            {/* Lista de planos */}
+            {/* Plans list */}
             <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={4}>
               {(plans?.items ?? []).map((p) => (
                 <Card
@@ -413,7 +413,7 @@ const PlansPage = () => {
             </SimpleGrid>
           </TabPanel>
 
-          {/* TAB 2: SESSÕES */}
+          {/* TAB 2: SESSIONS */}
           <TabPanel px={0}>
             {selectedPlan && (
               <>
@@ -593,7 +593,7 @@ const PlansPage = () => {
                   </Card>
                 </Collapse>
 
-                {/* Lista de sessões por dia */}
+                {/* Session list by day */}
                 <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={4}>
                   {[...groupedSessions.entries()]
                     .sort(([a], [b]) => a - b)

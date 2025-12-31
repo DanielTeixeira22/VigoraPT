@@ -1,4 +1,4 @@
-import { api } from './httpClient';
+import { api, raw } from './httpClient';
 import type { AuthResponse, User } from '../types/domain';
 
 export const login = async (payload: { emailOrUsername: string; password: string }): Promise<AuthResponse> => {
@@ -73,3 +73,18 @@ export const qrScanLogin = async (token: string): Promise<AuthResponse> => {
   return data;
 };
 
+/**
+ * Solicitar recuperação de password
+ */
+export const forgotPassword = async (email: string): Promise<{ message: string }> => {
+  const { data } = await raw.post<{ message: string }>('/auth/forgot-password', { email });
+  return data;
+};
+
+/**
+ * Redefinir password com token
+ */
+export const resetPassword = async (token: string, newPassword: string): Promise<{ message: string }> => {
+  const { data } = await raw.post<{ message: string }>('/auth/reset-password', { token, newPassword });
+  return data;
+};

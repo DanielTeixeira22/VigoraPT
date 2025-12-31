@@ -1,5 +1,16 @@
+/**
+ * Model: Notificação
+ * Alertas e avisos enviados aos utilizadores.
+ * Tipos: mensagens, treinos, planos, validações, etc.
+ */
+
 import { Schema, model, Types, Model, HydratedDocument } from 'mongoose';
 
+// ============================================================================
+// Tipos
+// ============================================================================
+
+/** Supported notification types. */
 export type NotificationType =
   | 'NEW_MESSAGE'
   | 'MISSED_WORKOUT'
@@ -12,6 +23,7 @@ export type NotificationType =
   | 'TRAINER_REJECTED'
   | 'ALERT';
 
+/** Notification document. */
 export interface Notification {
   recipientId: Types.ObjectId;
   type: NotificationType;
@@ -23,9 +35,18 @@ export interface Notification {
 
 export type NotificationDocument = HydratedDocument<Notification>;
 
+// ============================================================================
+// Schema
+// ============================================================================
+
 const NotificationSchema = new Schema<Notification>(
   {
-    recipientId: { type: Schema.Types.ObjectId, ref: 'User', required: true, index: true },
+    recipientId: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+      required: true,
+      index: true,
+    },
     type: {
       type: String,
       enum: [
@@ -38,12 +59,12 @@ const NotificationSchema = new Schema<Notification>(
         'TRAINER_CHANGE_DECIDED',
         'TRAINER_APPROVED',
         'TRAINER_REJECTED',
-        'ALERT'
+        'ALERT',
       ],
       required: true,
-      index: true
+      index: true,
     },
-    payload: { type: Schema.Types.Mixed }, // dados mínimos p/ abrir o detalhe (ids, preview)
+    payload: { type: Schema.Types.Mixed },
     isRead: { type: Boolean, default: false, index: true },
   },
   { timestamps: true }
@@ -51,6 +72,9 @@ const NotificationSchema = new Schema<Notification>(
 
 NotificationSchema.index({ recipientId: 1, createdAt: -1 });
 
-const NotificationModel: Model<Notification> = model<Notification>('Notification', NotificationSchema);
+const NotificationModel: Model<Notification> = model<Notification>(
+  'Notification',
+  NotificationSchema
+);
 
 export default NotificationModel;

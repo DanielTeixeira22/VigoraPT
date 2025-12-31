@@ -1,6 +1,14 @@
 "use strict";
+/**
+ * Model: Registo de Conclusão
+ * Regista se um treino foi realizado (DONE) ou falhado (MISSED).
+ * Único por cliente+sessão+data.
+ */
 Object.defineProperty(exports, "__esModule", { value: true });
 const mongoose_1 = require("mongoose");
+// ============================================================================
+// Schema
+// ============================================================================
 const CompletionLogSchema = new mongoose_1.Schema({
     clientId: {
         type: mongoose_1.Schema.Types.ObjectId,
@@ -25,41 +33,28 @@ const CompletionLogSchema = new mongoose_1.Schema({
         required: true,
         index: true,
     },
-    date: {
-        // Dia em que a sessão estava planeada/foi realizada (usar só a parte de data no frontend)
-        type: Date,
-        required: true,
-        index: true,
-    },
+    date: { type: Date, required: true, index: true },
     status: {
         type: String,
         enum: ['DONE', 'MISSED'],
         required: true,
         index: true,
     },
-    reason: {
-        // Motivo do não cumprimento (só faz sentido para MISSED)
-        type: String,
-        trim: true,
-    },
-    proofImage: {
-        // URL de imagem (ex.: foto pós-treino) se quiseres permitir "evidência"
-        type: String,
-    },
+    reason: { type: String, trim: true },
+    proofImage: { type: String },
 }, { timestamps: true });
-// Índices essenciais para dashboards e listagens
+// Indexes for dashboards.
 CompletionLogSchema.index({ clientId: 1, date: -1 });
 CompletionLogSchema.index({ trainerId: 1, date: -1 });
-// (Opcional mas recomendado) Evita duplicados para o mesmo cliente/sessão/dia
 CompletionLogSchema.index({ clientId: 1, sessionId: 1, date: 1 }, { unique: true });
-// Limpeza simples: esvazia "reason" quando status = DONE
+// Limpa reason se DONE e normaliza data para UTC midnight
 CompletionLogSchema.pre('save', function (next) {
-    if (this.status === 'DONE')
+    if (this.status === 'DONE') {
         this.reason = undefined;
-    // normaliza minutes/seconds para 00:00:00 (evita duplicados por hora)
+    }
     if (this.date instanceof Date) {
         const d = new Date(this.date);
-        d.setHours(0, 0, 0, 0);
+        d.setUTCHours(0, 0, 0, 0);
         this.date = d;
     }
     next();

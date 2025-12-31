@@ -1,8 +1,21 @@
 "use strict";
+/**
+ * Model: Notificação
+ * Alertas e avisos enviados aos utilizadores.
+ * Tipos: mensagens, treinos, planos, validações, etc.
+ */
 Object.defineProperty(exports, "__esModule", { value: true });
 const mongoose_1 = require("mongoose");
+// ============================================================================
+// Schema
+// ============================================================================
 const NotificationSchema = new mongoose_1.Schema({
-    recipientId: { type: mongoose_1.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
+    recipientId: {
+        type: mongoose_1.Schema.Types.ObjectId,
+        ref: 'User',
+        required: true,
+        index: true,
+    },
     type: {
         type: String,
         enum: [
@@ -15,12 +28,12 @@ const NotificationSchema = new mongoose_1.Schema({
             'TRAINER_CHANGE_DECIDED',
             'TRAINER_APPROVED',
             'TRAINER_REJECTED',
-            'ALERT'
+            'ALERT',
         ],
         required: true,
-        index: true
+        index: true,
     },
-    payload: { type: mongoose_1.Schema.Types.Mixed }, // dados mínimos p/ abrir o detalhe (ids, preview)
+    payload: { type: mongoose_1.Schema.Types.Mixed },
     isRead: { type: Boolean, default: false, index: true },
 }, { timestamps: true });
 NotificationSchema.index({ recipientId: 1, createdAt: -1 });

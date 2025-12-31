@@ -1,3 +1,5 @@
+// API service for Trainer Change.
+
 import { api } from './httpClient';
 import type { TrainerChangeRequest, TrainerChangeStatus } from '../types/domain';
 

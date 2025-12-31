@@ -18,10 +18,7 @@ import notificationRoutes from './routes/notifications.routes';
 import statsRoutes from './routes/stats.routes';
 import bodyMetricsRoutes from './routes/bodyMetrics.routes';
 
-
-
-
-
+// Express setup: global middleware, routes, and docs.
 const app: Application = express();
 
 app.use(cors());
@@ -44,7 +41,8 @@ try {
   console.error('Erro ao carregar swagger.json:', message);
 }
 
-app.use('/api/auth/qr', qrRoutes);  // Must be before /api/auth to match correctly
+// QR login must be registered before /api/auth to avoid route conflicts.
+app.use('/api/auth/qr', qrRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/uploads', uploadRoutes);
 app.use('/api/chat', chatRoutes);

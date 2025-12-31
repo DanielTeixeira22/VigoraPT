@@ -1,4 +1,14 @@
 "use strict";
+/**
+ * Trainer Change Request Controller
+ *
+ * Handles client requests to change trainers including:
+ * - Creating change requests
+ * - Listing all requests (admin)
+ * - Approving/rejecting requests (admin)
+ *
+ * @module controllers/trainer-change
+ */
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -10,124 +20,230 @@ const ClientProfile_1 = __importDefault(require("../models/ClientProfile"));
 const TrainerProfile_1 = __importDefault(require("../models/TrainerProfile"));
 const User_1 = __importDefault(require("../models/User"));
 const Notification_1 = __importDefault(require("../models/Notification"));
+const socketServer_1 = require("../socket/socketServer");
+// ============================================================================
+// Funcoes auxiliares
+// ============================================================================
+/**
+ * Validates that the request has an authenticated user.
+ *
+ * @param req - Express request object
+ * @throws {HttpError} 401 if user is not authenticated
+ */
+const requireAuth = (req) => {
+    if (!req.user) {
+        throw (0, http_errors_1.default)(401, 'Autenticação requerida.');
+    }
+};
+/**
+ * Notifies all active admins about a new request.
+ *
+ * @param requestId - The request document ID
+ * @param clientId - The client profile ID
+ */
+const notifyAdminsOfRequest = async (requestId, clientId) => {
+    const admins = await User_1.default.find({ role: 'ADMIN', isActive: true }).select('_id');
+    if (admins.length === 0)
+        return;
+    const notifications = await Notification_1.default.insertMany(admins.map((admin) => ({
+        recipientId: admin._id,
+        type: 'TRAINER_CHANGE_REQUEST',
+        payload: { requestId, clientId },
+        isRead: false,
+    })));
+    // Emit real-time notifications to all admins
+    admins.forEach((admin, index) => {
+        (0, socketServer_1.emitToUser)(String(admin._id), 'notification:new', notifications[index]);
+    });
+};
+// ============================================================================
+// Request Management Endpoints
+// ============================================================================
+/**
+ * Creates a new trainer change request.
+ *
+ * @route POST /api/trainer-requests
+ * @access Private - CLIENT only
+ *
+ * @param req - Express request with request data
+ * @param res - Express response
+ * @param next - Express next function
+ *
+ * @returns {TrainerChangeRequest} The created request
+ * @throws {HttpError} 400 if trainer invalid or not validated
+ * @throws {HttpError} 401 if not authenticated
+ * @throws {HttpError} 409 if pending request already exists
+ */
 const createRequest = async (req, res, next) => {
     var _a;
     try {
-        if (!req.user)
-            throw (0, http_errors_1.default)(401, 'Autenticação requerida.');
+        requireAuth(req);
         const { requestedTrainerId, reason } = req.body;
         if (!requestedTrainerId) {
-            return res.status(400).json({ message: 'requestedTrainerId é obrigatório.' });
+            throw (0, http_errors_1.default)(400, 'requestedTrainerId é obrigatório.');
         }
-        // perfil de cliente deste user
+        // Get or create client profile.
         let clientProfile = await ClientProfile_1.default.findOne({ userId: req.user._id });
         if (!clientProfile) {
-            clientProfile = await ClientProfile_1.default.create({ userId: req.user._id, trainerId: null });
+            clientProfile = await ClientProfile_1.default.create({
+                userId: req.user._id,
+                trainerId: null,
+            });
         }
-        // garante que o PT existe e está validado
+        // Validate trainer exists and is approved
         const trainer = await TrainerProfile_1.default.findById(requestedTrainerId).select('validatedByAdmin');
         if (!trainer || !trainer.validatedByAdmin) {
-            return res.status(400).json({ message: 'Treinador inválido ou não validado.' });
+            throw (0, http_errors_1.default)(400, 'Treinador inválido ou não validado.');
         }
-        // evita múltiplos pedidos pendentes
-        const existing = await TrainerChangeRequest_1.default.findOne({
+        // Prevent multiple pending requests
+        const existingRequest = await TrainerChangeRequest_1.default.findOne({
             clientId: clientProfile._id,
             status: 'PENDING',
         });
-        if (existing) {
-            return res.status(409).json({ message: 'Já existe um pedido pendente.' });
+        if (existingRequest) {
+            throw (0, http_errors_1.default)(409, 'Já existe um pedido pendente.');
         }
-        const doc = await TrainerChangeRequest_1.default.create({
+        const changeRequest = await TrainerChangeRequest_1.default.create({
             clientId: clientProfile._id,
             currentTrainerId: (_a = clientProfile.trainerId) !== null && _a !== void 0 ? _a : undefined,
             requestedTrainerId,
             reason,
             status: 'PENDING',
         });
-        // Notificar todos os admins
-        const admins = await User_1.default.find({ role: 'ADMIN', isActive: true }).select('_id');
-        if (admins.length) {
-            await Notification_1.default.insertMany(admins.map((a) => ({
-                recipientId: a._id,
-                type: 'TRAINER_CHANGE_REQUEST',
-                payload: { requestId: doc._id, clientId: clientProfile._id },
-                isRead: false,
-            })));
-        }
-        res.status(201).json(doc);
+        // Notify admins
+        await notifyAdminsOfRequest(changeRequest._id, clientProfile._id);
+        res.status(201).json(changeRequest);
     }
-    catch (err) {
-        next(err);
+    catch (error) {
+        next(error);
     }
 };
 exports.createRequest = createRequest;
+/**
+ * Lists all trainer change requests with optional filtering.
+ *
+ * @route GET /api/trainer-requests
+ * @access Private - ADMIN only
+ *
+ * @param req - Express request with optional status filter
+ * @param res - Express response
+ * @param next - Express next function
+ *
+ * @returns {TrainerChangeRequest[]} Array of populated requests
+ */
 const listRequests = async (req, res, next) => {
     try {
         const { status } = req.query;
         const filter = {};
         if (status)
             filter.status = status;
-        const items = await TrainerChangeRequest_1.default
-            .find(filter)
-            .populate({ path: 'clientId', populate: { path: 'userId', select: 'username email profile.firstName profile.lastName' } })
-            .populate({ path: 'requestedTrainerId', populate: { path: 'userId', select: 'username email profile.firstName profile.lastName' } })
-            .populate({ path: 'currentTrainerId', populate: { path: 'userId', select: 'username email profile.firstName profile.lastName' } })
+        const requests = await TrainerChangeRequest_1.default.find(filter)
+            .populate({
+            path: 'clientId',
+            populate: {
+                path: 'userId',
+                select: 'username email profile.firstName profile.lastName',
+            },
+        })
+            .populate({
+            path: 'requestedTrainerId',
+            populate: {
+                path: 'userId',
+                select: 'username email profile.firstName profile.lastName',
+            },
+        })
+            .populate({
+            path: 'currentTrainerId',
+            populate: {
+                path: 'userId',
+                select: 'username email profile.firstName profile.lastName',
+            },
+        })
             .sort({ createdAt: -1 });
-        res.json(items);
+        res.json(requests);
     }
-    catch (err) {
-        next(err);
+    catch (error) {
+        next(error);
     }
 };
 exports.listRequests = listRequests;
+/**
+ * Approves or rejects a trainer change request.
+ *
+ * If approved:
+ * - Updates client's trainerId
+ * - Notifies new trainer about new client
+ * - Notifies client about approval
+ *
+ * If rejected:
+ * - Notifies client about rejection
+ *
+ * @route POST /api/trainer-requests/:id/decide
+ * @access Private - ADMIN only
+ *
+ * @param req - Express request with decision status
+ * @param res - Express response
+ * @param next - Express next function
+ *
+ * @returns {TrainerChangeRequest} The updated request
+ * @throws {HttpError} 400 if invalid status or already decided
+ * @throws {HttpError} 401 if not authenticated
+ * @throws {HttpError} 404 if request not found
+ */
 const decideRequest = async (req, res, next) => {
     try {
-        if (!req.user)
-            throw (0, http_errors_1.default)(401, 'Autenticação requerida.');
+        requireAuth(req);
         const { status } = req.body;
         if (!status || !['APPROVED', 'REJECTED'].includes(status)) {
-            return res.status(400).json({ message: 'status deve ser APPROVED ou REJECTED.' });
+            throw (0, http_errors_1.default)(400, 'status deve ser APPROVED ou REJECTED.');
         }
-        const request = await TrainerChangeRequest_1.default.findById(req.params.id);
-        if (!request)
-            return res.status(404).json({ message: 'Pedido não encontrado.' });
-        if (request.status !== 'PENDING') {
-            return res.status(400).json({ message: 'Pedido já foi decidido.' });
+        const changeRequest = await TrainerChangeRequest_1.default.findById(req.params.id);
+        if (!changeRequest) {
+            throw (0, http_errors_1.default)(404, 'Pedido não encontrado.');
         }
-        request.status = status;
-        request.decidedByAdminId = req.user._id;
-        await request.save();
-        // Buscar cliente para notificação
-        const clientProfile = await ClientProfile_1.default.findById(request.clientId).select('userId');
-        // se aprovado, atualiza o trainerId do ClientProfile
+        if (changeRequest.status !== 'PENDING') {
+            throw (0, http_errors_1.default)(400, 'Pedido já foi decidido.');
+        }
+        changeRequest.status = status;
+        changeRequest.decidedByAdminId = req.user._id;
+        await changeRequest.save();
+        // Get client for notifications.
+        const clientProfile = await ClientProfile_1.default.findById(changeRequest.clientId).select('userId');
         if (status === 'APPROVED') {
-            await ClientProfile_1.default.findByIdAndUpdate(request.clientId, { $set: { trainerId: request.requestedTrainerId } });
-            // promove user do trainer para TRAINER se ainda não estiver
-            const trainer = await TrainerProfile_1.default.findById(request.requestedTrainerId).select('userId');
+            // Update client's trainer
+            await ClientProfile_1.default.findByIdAndUpdate(changeRequest.clientId, {
+                $set: { trainerId: changeRequest.requestedTrainerId },
+            });
+            // Notify new trainer
+            const trainer = await TrainerProfile_1.default.findById(changeRequest.requestedTrainerId).select('userId');
             if (trainer === null || trainer === void 0 ? void 0 : trainer.userId) {
                 await User_1.default.findByIdAndUpdate(trainer.userId, { $set: { role: 'TRAINER' } });
-                // Notificar novo trainer sobre novo cliente
-                await Notification_1.default.create({
+                const notification = await Notification_1.default.create({
                     recipientId: trainer.userId,
                     type: 'NEW_CLIENT',
-                    payload: { clientId: request.clientId, requestId: request._id },
+                    payload: {
+                        clientId: changeRequest.clientId,
+                        requestId: changeRequest._id,
+                    },
                     isRead: false,
                 });
+                (0, socketServer_1.emitToUser)(String(trainer.userId), 'notification:new', notification);
             }
         }
-        // Notificar cliente sobre decisão
+        // Notify client about decision
         if (clientProfile === null || clientProfile === void 0 ? void 0 : clientProfile.userId) {
-            await Notification_1.default.create({
+            const notification = await Notification_1.default.create({
                 recipientId: clientProfile.userId,
                 type: 'TRAINER_CHANGE_DECIDED',
-                payload: { status, requestId: request._id },
+                payload: { status, requestId: changeRequest._id },
                 isRead: false,
             });
+            (0, socketServer_1.emitToUser)(String(clientProfile.userId), 'notification:new', notification);
         }
-        res.json(request);
+        res.json(changeRequest);
     }
-    catch (err) {
-        next(err);
+    catch (error) {
+        next(error);
     }
 };
 exports.decideRequest = decideRequest;

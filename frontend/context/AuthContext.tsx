@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import * as authApi from '../services/auth';
 import type { User, AuthResponse } from '../types/domain';
 import { AUTH_CLEARED_EVENT, clearTokens, getRefreshToken, setTokens } from '../utils/tokenStorage';
@@ -31,6 +32,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
+  const queryClient = useQueryClient();
   const [user, setUser] = useState<User | null>(null);
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -45,14 +47,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setUser(null);
     setAccessToken(null);
     clearTokens();
-  }, []);
+    // Limpa todo o cache de queries para evitar dados stale de outro utilizador
+    queryClient.clear();
+  }, [queryClient]);
 
   const login = useCallback(
     async (payload: { emailOrUsername: string; password: string }) => {
+      // Limpa cache antes do login para evitar dados stale de sessão anterior
+      queryClient.clear();
       const response = await authApi.login(payload);
       applyAuthResponse(response);
     },
-    [applyAuthResponse]
+    [applyAuthResponse, queryClient]
   );
 
   const register = useCallback(

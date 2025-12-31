@@ -1,3 +1,5 @@
+// Type extensions.
+
 import type { UserDocument } from '../../models/User';
 
 declare global {

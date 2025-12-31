@@ -1,3 +1,5 @@
+// API service for Chat.
+
 import { api } from './httpClient';
 import type { Conversation, Message } from '../types/domain';
 

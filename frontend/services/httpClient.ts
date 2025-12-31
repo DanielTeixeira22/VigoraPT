@@ -6,6 +6,7 @@ const baseURL = import.meta.env.VITE_API_URL ?? '/api';
 
 type RetriableConfig = InternalAxiosRequestConfig & { _retry?: boolean };
 
+// Core HTTP client with token refresh and queued requests.
 const api: AxiosInstance = axios.create({ baseURL });
 const raw: AxiosInstance = axios.create({ baseURL });
 
@@ -72,7 +73,7 @@ api.interceptors.response.use(
       }
     }
 
-    // If we reach here and still have a 401, clear any stale tokens so UI redirects to login
+    // If 401 persists, clear tokens to force re-auth in the UI.
     if (status === 401) {
       clearTokens();
     }
@@ -81,4 +82,4 @@ api.interceptors.response.use(
   }
 );
 
-export { api };
+export { api, raw };

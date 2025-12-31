@@ -6,13 +6,13 @@ const router = Router();
 
 router.use(auth);
 
-// GET /api/body-metrics - List my metrics history
+// GET /api/body-metrics - List user metrics history.
 router.get('/', listMyMetrics);
 
-// GET /api/body-metrics/current - Get current weight/muscle mass
+// GET /api/body-metrics/current - Obtem peso/massa muscular atual
 router.get('/current', getCurrentMetrics);
 
-// POST /api/body-metrics - Record a new metric
+// POST /api/body-metrics - Regista uma nova metrica
 router.post('/', recordMetric);
 
 export default router;

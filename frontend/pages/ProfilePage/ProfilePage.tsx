@@ -22,23 +22,21 @@ import {
   Text,
   Textarea,
   useToast,
-  VStack,
 } from '@chakra-ui/react';
-import { FiLock, FiSettings, FiUser } from 'react-icons/fi';
+import { FiKey, FiLock, FiRefreshCw, FiSettings, FiUser } from 'react-icons/fi';
 import { QRCodeSVG } from 'qrcode.react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRef, useState, useEffect } from 'react';
 import { changePassword, updateMe } from '../../services/users';
 import { qrGenerate } from '../../services/auth';
 import { uploadFile } from '../../services/uploads';
-import { getMyTrainerProfile, listPublicTrainers } from '../../services/trainers';
+import { listPublicTrainers } from '../../services/trainers';
 import { getMyClientProfile } from '../../services/clients';
 import { createTrainerChangeRequest, listTrainerChangeRequests } from '../../services/trainerChange';
 import { getCurrentMetrics, recordBodyMetric } from '../../services/bodyMetrics';
 import type { AxiosError } from 'axios';
 import PageHeader from '../../components/ui/PageHeader';
 import { useAuth } from '../../context/AuthContext';
-import ProgressCharts from '../../components/charts/ProgressCharts';
 
 const ProfilePage = () => {
   const toast = useToast();
@@ -59,12 +57,6 @@ const ProfilePage = () => {
   const [qrToken, setQrToken] = useState<{ token: string; expiresAt: string } | null>(null);
   const [qrLoading, setQrLoading] = useState(false);
   const [changeRequest, setChangeRequest] = useState({ trainerId: '', reason: '' });
-
-  const { data: trainerProfile } = useQuery({
-    queryKey: ['trainer', 'me'],
-    enabled: user?.role === 'TRAINER',
-    queryFn: getMyTrainerProfile,
-  });
 
   const { data: clientProfile } = useQuery({
     queryKey: ['client', 'me'],
@@ -149,13 +141,13 @@ const ProfilePage = () => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Validar tipo de ficheiro
+    // Validate file type.
     if (!file.type.startsWith('image/')) {
       toast({ title: 'Por favor seleciona uma imagem', status: 'warning' });
       return;
     }
 
-    // Validar tamanho (max 5MB)
+    // Validate size (max 5MB).
     if (file.size > 5 * 1024 * 1024) {
       toast({ title: 'Imagem muito grande (máximo 5MB)', status: 'warning' });
       return;
@@ -203,16 +195,19 @@ const ProfilePage = () => {
                   <Text>Segurança</Text>
                 </HStack>
               </Tab>
-              <Tab>
-                <HStack spacing={2}>
-                  <Icon as={FiSettings} />
-                  <Text>Conta</Text>
-                </HStack>
-              </Tab>
+              {/* Tab Conta apenas para CLIENT */}
+              {user?.role === 'CLIENT' && (
+                <Tab>
+                  <HStack spacing={2}>
+                    <Icon as={FiSettings} />
+                    <Text>Conta</Text>
+                  </HStack>
+                </Tab>
+              )}
             </TabList>
 
             <TabPanels>
-              {/* TAB 1: Dados Pessoais */}
+              {/* TAB 1: Personal Data */}
               <TabPanel px={0}>
                 <form
                   onSubmit={(e) => {
@@ -269,16 +264,19 @@ const ProfilePage = () => {
                       <FormLabel fontWeight={600}>Email</FormLabel>
                       <Input value={local.email} onChange={(e) => setLocal({ ...local, email: e.target.value })} />
                     </FormControl>
-                    <HStack spacing={4}>
-                      <FormControl>
-                        <FormLabel fontWeight={600}>Primeiro nome</FormLabel>
-                        <Input value={local.firstName} onChange={(e) => setLocal({ ...local, firstName: e.target.value })} />
-                      </FormControl>
-                      <FormControl>
-                        <FormLabel fontWeight={600}>Apelido</FormLabel>
-                        <Input value={local.lastName} onChange={(e) => setLocal({ ...local, lastName: e.target.value })} />
-                      </FormControl>
-                    </HStack>
+                    {/* Campos de nome apenas para CLIENT e TRAINER */}
+                    {(user?.role === 'CLIENT' || user?.role === 'TRAINER') && (
+                      <HStack spacing={4}>
+                        <FormControl>
+                          <FormLabel fontWeight={600}>Primeiro nome</FormLabel>
+                          <Input value={local.firstName} onChange={(e) => setLocal({ ...local, firstName: e.target.value })} />
+                        </FormControl>
+                        <FormControl>
+                          <FormLabel fontWeight={600}>Apelido</FormLabel>
+                          <Input value={local.lastName} onChange={(e) => setLocal({ ...local, lastName: e.target.value })} />
+                        </FormControl>
+                      </HStack>
+                    )}
 
                     {/* Weight and Muscle Mass for Clients */}
                     {user?.role === 'CLIENT' && (
@@ -329,14 +327,6 @@ const ProfilePage = () => {
                         </Button>
                       </Box>
                     )}
-
-                    {/* Progress Charts for Clients */}
-                    {user?.role === 'CLIENT' && (
-                      <Box mt={4}>
-                        <Text fontWeight={600} mb={3}>📈 Evolução do Progresso</Text>
-                        <ProgressCharts limit={30} />
-                      </Box>
-                    )}
                     <Button type="submit" colorScheme="brand" size="lg" isLoading={mutation.isPending}>
                       Guardar alterações
                     </Button>
@@ -344,12 +334,12 @@ const ProfilePage = () => {
                 </form>
               </TabPanel>
 
-              {/* TAB 2: Segurança */}
+              {/* TAB 2: Security */}
               <TabPanel px={0}>
                 <Stack spacing={6} maxW="500px">
                   {/* Password Change */}
                   <Box p={5} border="1px solid" borderColor="border" borderRadius="12px">
-                    <Heading size="sm" mb={4}>🔑 Alteração de password</Heading>
+                    <Heading size="sm" mb={4}><Icon as={FiKey} mr={2} verticalAlign="text-bottom" />Alteração de password</Heading>
                     <Stack spacing={4}>
                       <FormControl isRequired>
                         <FormLabel fontWeight={600}>Password atual</FormLabel>
@@ -378,7 +368,7 @@ const ProfilePage = () => {
                     </Stack>
                   </Box>
 
-                  {/* QR Code para Login */}
+                  {/* QR code for login */}
                   <Box 
                     p={5} 
                     borderRadius="16px" 
@@ -493,99 +483,80 @@ const ProfilePage = () => {
                 </Stack>
               </TabPanel>
 
-              {/* TAB 3: Conta */}
-              <TabPanel px={0}>
-                <Stack spacing={6} maxW="600px">
-                  {/* Perfil de Trainer */}
-                  {user?.role === 'TRAINER' && (
-                    <Box p={5} border="1px solid" borderColor="brand.200" borderRadius="12px" bg="brand.50" _dark={{ bg: 'gray.800' }}>
-                      <Heading size="sm" mb={3}>🏋️ Perfil de Treinador</Heading>
-                      <VStack align="start" spacing={2}>
-                        <HStack>
-                          <Text fontWeight={600} w="120px">Validado:</Text>
-                          <Text color={trainerProfile?.validatedByAdmin ? 'green.500' : 'orange.500'}>
-                            {trainerProfile?.validatedByAdmin ? '✓ Sim' : '⏳ Não'}
-                          </Text>
-                        </HStack>
-                        <HStack align="start">
-                          <Text fontWeight={600} w="120px">Especialidades:</Text>
-                          <Text color="muted">{trainerProfile?.specialties?.join(', ') || 'n/d'}</Text>
-                        </HStack>
-                      </VStack>
-                    </Box>
-                  )}
+              {/* TAB 3: Conta - apenas para CLIENT */}
+              {user?.role === 'CLIENT' && (
+                <TabPanel px={0}>
+                  <Stack spacing={6} maxW="600px">
+                    {/* Request trainer change (clients only) */}
+                    <Box p={5} border="1px solid" borderColor="border" borderRadius="12px">
+                      <Heading size="sm" mb={2}><Icon as={FiRefreshCw} mr={2} verticalAlign="text-bottom" />Pedir alteração de treinador</Heading>
+                      <Text fontSize="sm" color="muted" mb={4}>
+                        Escolhe um treinador validado e envia o pedido ao administrador.
+                      </Text>
 
-                  {/* Pedir alteração de treinador (apenas para clientes) */}
-                  {user?.role === 'CLIENT' && (
-                      <Box p={5} border="1px solid" borderColor="border" borderRadius="12px">
-                        <Heading size="sm" mb={2}>🔄 Pedir alteração de treinador</Heading>
-                        <Text fontSize="sm" color="muted" mb={4}>
-                          Escolhe um treinador validado e envia o pedido ao administrador.
+                      {(trainerOptions?.items?.length ?? 0) === 0 && (
+                        <Text fontSize="sm" color="orange.400" mb={3}>
+                          Ainda não há personal trainers validados disponíveis.
                         </Text>
+                      )}
 
-                        {(trainerOptions?.items?.length ?? 0) === 0 && (
-                          <Text fontSize="sm" color="orange.400" mb={3}>
-                            Ainda não há personal trainers validados disponíveis.
+                      {pendingRequest && (
+                        <Box mb={4} p={3} bg="yellow.50" _dark={{ bg: 'yellow.900' }} borderRadius="8px">
+                          <Text fontSize="sm" color="yellow.600" _dark={{ color: 'yellow.300' }}>
+                            ⏳ Já tens um pedido de mudança pendente. Aguarda a decisão do administrador.
                           </Text>
-                        )}
+                        </Box>
+                      )}
 
-                        {pendingRequest && (
-                          <Box mb={4} p={3} bg="yellow.50" _dark={{ bg: 'yellow.900' }} borderRadius="8px">
-                            <Text fontSize="sm" color="yellow.600" _dark={{ color: 'yellow.300' }}>
-                              ⏳ Já tens um pedido de mudança pendente. Aguarda a decisão do administrador.
-                            </Text>
-                          </Box>
-                        )}
-
-                        <Stack spacing={4}>
-                          <FormControl isRequired>
-                            <FormLabel fontWeight={600}>Novo treinador</FormLabel>
-                            <Select
-                              placeholder="Seleciona"
-                              value={changeRequest.trainerId}
-                              onChange={(e) => setChangeRequest({ ...changeRequest, trainerId: e.target.value })}
-                              isDisabled={(trainerOptions?.items?.length ?? 0) === 0 || !!pendingRequest}
-                            >
-                              {(trainerOptions?.items ?? []).map((t) => {
-                                const userRef = t.userId as { profile?: { firstName?: string; lastName?: string }; username?: string } | string;
-                                const name =
-                                  typeof userRef === 'object'
-                                    ? `${userRef.profile?.firstName ?? ''} ${userRef.profile?.lastName ?? ''}`.trim() || userRef.username || 'Trainer'
-                                    : userRef;
-                                return (
-                                  <option key={t._id} value={t._id}>
-                                    {name} {t.certification ? `· ${t.certification}` : ''}
-                                  </option>
-                                );
-                              })}
-                            </Select>
-                          </FormControl>
-                          <FormControl>
-                            <FormLabel fontWeight={600}>Motivo (opcional)</FormLabel>
-                            <Textarea
-                              value={changeRequest.reason}
-                              onChange={(e) => setChangeRequest({ ...changeRequest, reason: e.target.value })}
-                              isDisabled={!!pendingRequest}
-                            />
-                          </FormControl>
-                          <Button
-                            colorScheme="brand"
-                            onClick={() =>
-                              changeTrainerMutation.mutate({
-                                requestedTrainerId: changeRequest.trainerId,
-                                reason: changeRequest.reason || undefined,
-                              })
-                            }
-                            isDisabled={!changeRequest.trainerId || (trainerOptions?.items?.length ?? 0) === 0 || !!pendingRequest}
-                            isLoading={changeTrainerMutation.isPending}
+                      <Stack spacing={4}>
+                        <FormControl isRequired>
+                          <FormLabel fontWeight={600}>Novo treinador</FormLabel>
+                          <Select
+                            placeholder="Seleciona"
+                            value={changeRequest.trainerId}
+                            onChange={(e) => setChangeRequest({ ...changeRequest, trainerId: e.target.value })}
+                            isDisabled={(trainerOptions?.items?.length ?? 0) === 0 || !!pendingRequest}
                           >
-                            Enviar pedido
-                          </Button>
-                        </Stack>
-                      </Box>
-                  )}
-                </Stack>
-              </TabPanel>
+                            {(trainerOptions?.items ?? []).map((t) => {
+                              const userRef = t.userId as { profile?: { firstName?: string; lastName?: string }; username?: string } | string;
+                              const name =
+                                typeof userRef === 'object'
+                                  ? `${userRef.profile?.firstName ?? ''} ${userRef.profile?.lastName ?? ''}`.trim() || userRef.username || 'Trainer'
+                                  : userRef;
+                              return (
+                                <option key={t._id} value={t._id}>
+                                  {name} {t.certification ? `· ${t.certification}` : ''}
+                                </option>
+                              );
+                            })}
+                          </Select>
+                        </FormControl>
+                        <FormControl>
+                          <FormLabel fontWeight={600}>Motivo (opcional)</FormLabel>
+                          <Textarea
+                            value={changeRequest.reason}
+                            onChange={(e) => setChangeRequest({ ...changeRequest, reason: e.target.value })}
+                            isDisabled={!!pendingRequest}
+                          />
+                        </FormControl>
+                        <Button
+                          colorScheme="brand"
+                          onClick={() =>
+                            changeTrainerMutation.mutate({
+                              requestedTrainerId: changeRequest.trainerId,
+                              reason: changeRequest.reason || undefined,
+                            })
+                          }
+                          isDisabled={!changeRequest.trainerId || (trainerOptions?.items?.length ?? 0) === 0 || !!pendingRequest}
+                          isLoading={changeTrainerMutation.isPending}
+                        >
+                          Enviar pedido
+                        </Button>
+                      </Stack>
+                    </Box>
+                  </Stack>
+                </TabPanel>
+              )}
             </TabPanels>
           </Tabs>
         </CardBody>

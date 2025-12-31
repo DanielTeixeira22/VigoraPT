@@ -9,13 +9,13 @@ import {
 
 const router = Router();
 
-// Cliente cria pedido de mudança de PT
+// Client creates trainer change request.
 router.post('/', auth, requireRole('CLIENT'), createRequest);
 
-// Admin lista pedidos (pode filtrar por status ?status=PENDING/APPROVED/REJECTED)
+// Admin lists requests (can filter by status ?status=PENDING/APPROVED/REJECTED)
 router.get('/', auth, requireRole('ADMIN'), listRequests);
 
-// Admin decide um pedido
+// Admin decides a request
 router.patch('/:id', auth, requireRole('ADMIN'), decideRequest);
 
 export default router;

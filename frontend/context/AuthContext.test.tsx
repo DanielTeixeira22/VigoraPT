@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { AuthProvider, useAuth } from './AuthContext';
 import * as authApi from '../services/auth';
 
-// Mock do módulo de API
+// Mock the API module.
 vi.mock('../services/auth');
 
 // Mock do tokenStorage
@@ -16,7 +16,7 @@ vi.mock('../utils/tokenStorage', () => ({
   AUTH_CLEARED_EVENT: 'auth:cleared',
 }));
 
-// Componente de teste que expõe o hook
+// Test component that exposes the hook.
 const TestComponent = () => {
   const { user, isAuthenticated, isLoading, login, logout } = useAuth();
 
@@ -92,11 +92,11 @@ describe('AuthContext', () => {
         expect(screen.getByTestId('loading')).toHaveTextContent('ready');
       });
 
-      // Clica no botão de login
+      // Click the login button.
       const loginButton = screen.getByText('Login');
       await userEvent.click(loginButton);
 
-      // Verifica se o estado foi atualizado
+      // Verify that state was updated.
       await waitFor(() => {
         expect(screen.getByTestId('authenticated')).toHaveTextContent('yes');
         expect(screen.getByTestId('username')).toHaveTextContent('testuser');

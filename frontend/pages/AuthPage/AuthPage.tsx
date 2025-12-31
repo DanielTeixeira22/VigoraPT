@@ -7,7 +7,9 @@ import {
   FormControl,
   FormLabel,
   Heading,
+  Icon,
   Input,
+  Link as ChakraLink,
   Modal,
   ModalBody,
   ModalCloseButton,
@@ -19,9 +21,10 @@ import {
   useDisclosure,
   useToast,
 } from '@chakra-ui/react';
+import { FiArrowLeft } from 'react-icons/fi';
 import type { FormEvent } from 'react';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { AxiosError } from 'axios';
 import { Html5Qrcode } from 'html5-qrcode';
 import { qrScanLogin } from '../../services/auth';
@@ -83,7 +86,7 @@ const AuthPage = () => {
     return () => clearInterval(interval);
   }, []);
 
-  // Atualizar URL quando muda de modo
+  // Update URL when mode changes.
   useEffect(() => {
     const targetPath = isRegisterMode ? '/register' : '/login';
     if (location.pathname !== targetPath) {
@@ -109,7 +112,7 @@ const AuthPage = () => {
     if (scannerRef.current) {
       try {
         const state = scannerRef.current.getState();
-        // Só para se estiver realmente a correr (state 2 = scanning)
+        // Only stop if it is actually running (state 2 = scanning).
         if (state === 2) {
           await scannerRef.current.stop();
         }
@@ -137,7 +140,7 @@ const AuthPage = () => {
           qrbox: { width: 250, height: 250 },
         },
         async (decodedText) => {
-          // QR Code detetado! Parar scanner primeiro
+          // QR code detected! Stop the scanner first.
           try {
             const state = html5QrCode.getState();
             if (state === 2) {
@@ -165,7 +168,7 @@ const AuthPage = () => {
           }
         },
         () => {
-          // QR Code não detetado - silencioso
+          // QR code not detected - silent.
         }
       );
       setScannerActive(true);
@@ -312,7 +315,7 @@ const AuthPage = () => {
         <Slideshow align={isRegisterMode ? 'right' : 'left'} />
       </Box>
 
-      {/* Formulário Login - Sempre à DIREITA, visível quando login mode */}
+      {/* Login form - always on the RIGHT, visible in login mode */}
       <Flex
         position="absolute"
         top={0}
@@ -329,6 +332,10 @@ const AuthPage = () => {
         zIndex={5}
       >
         <Box w="100%" maxW="400px">
+          <ChakraLink as={Link} to="/" display="inline-flex" alignItems="center" gap={2} mb={4} color="muted" fontSize="sm" _hover={{ color: 'brand.500', textDecoration: 'none' }}>
+            <Icon as={FiArrowLeft} />
+            Voltar à página inicial
+          </ChakraLink>
           <Heading size="lg" mb={2}>Entrar</Heading>
           <Text color="muted" mb={6}>
             Autenticação com username/email e password ou QR Code.
@@ -353,6 +360,17 @@ const AuthPage = () => {
                 />
               </FormControl>
               <Button type="submit" isLoading={loginLoading}>Entrar</Button>
+              <ChakraLink
+                as={Link}
+                to="/forgot-password"
+                fontSize="sm"
+                color="muted"
+                textAlign="center"
+                display="block"
+                _hover={{ color: 'brand.500' }}
+              >
+                Esqueceste a password?
+              </ChakraLink>
             </Stack>
           </form>
 
@@ -374,7 +392,7 @@ const AuthPage = () => {
             </Flex>
           </Box>
 
-          {/* Modal do Scanner QR */}
+          {/* QR scanner modal */}
           <Modal isOpen={isQrModalOpen} onClose={closeQrModal} size="lg" isCentered>
             <ModalOverlay bg="blackAlpha.800" />
             <ModalContent>
@@ -409,7 +427,7 @@ const AuthPage = () => {
         </Box>
       </Flex>
 
-      {/* Formulário Register - Sempre à ESQUERDA, visível quando register mode */}
+      {/* Register form - always on the LEFT, visible in register mode */}
       <Flex
         position="absolute"
         top={0}
@@ -427,6 +445,10 @@ const AuthPage = () => {
         zIndex={5}
       >
         <Box w="100%" maxW="420px">
+          <ChakraLink as={Link} to="/" display="inline-flex" alignItems="center" gap={2} mb={4} color="muted" fontSize="sm" _hover={{ color: 'brand.500', textDecoration: 'none' }}>
+            <Icon as={FiArrowLeft} />
+            Voltar à página inicial
+          </ChakraLink>
           <Heading size="lg" mb={2}>Criar conta</Heading>
           <Text color="muted" mb={6} fontSize="sm">
             O registo cria um perfil de Cliente. Para ser Personal Trainer, pede validação ao admin após login.

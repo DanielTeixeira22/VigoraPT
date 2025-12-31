@@ -1,7 +1,19 @@
+/**
+ * Model: Ficheiro/Asset
+ * Ficheiros carregados pelos utilizadores.
+ * Categorizado por propósito (perfil, prova, conteúdo, outro).
+ */
+
 import { Schema, model, Types, Model, HydratedDocument } from 'mongoose';
 
+// ============================================================================
+// Tipos
+// ============================================================================
+
+/** Finalidade do ficheiro */
 export type FilePurpose = 'PROFILE' | 'PROOF' | 'CONTENT' | 'OTHER';
 
+/** FileAsset document. */
 export interface FileAsset {
   ownerId?: Types.ObjectId;
   purpose: FilePurpose;
@@ -16,15 +28,24 @@ export interface FileAsset {
 
 export type FileAssetDocument = HydratedDocument<FileAsset>;
 
+// ============================================================================
+// Schema
+// ============================================================================
+
 const FileAssetSchema = new Schema<FileAsset>(
   {
-    ownerId:   { type: Schema.Types.ObjectId, ref: 'User', index: true }, // quem subiu o ficheiro
-    purpose:   { type: String, enum: ['PROFILE', 'PROOF', 'CONTENT', 'OTHER'], default: 'OTHER', index: true },
-    filename:  { type: String, required: true, trim: true },
-    mimeType:  { type: String, required: true, trim: true },
-    size:      { type: Number, required: true, min: 0 },
-    url:       { type: String, required: true, trim: true }, // CDN/S3/Cloudinary/GridFS URL
-    metadata:  { type: Schema.Types.Mixed },                  // ex: { sessionId, completionLogId }
+    ownerId: { type: Schema.Types.ObjectId, ref: 'User', index: true },
+    purpose: {
+      type: String,
+      enum: ['PROFILE', 'PROOF', 'CONTENT', 'OTHER'],
+      default: 'OTHER',
+      index: true,
+    },
+    filename: { type: String, required: true, trim: true },
+    mimeType: { type: String, required: true, trim: true },
+    size: { type: Number, required: true, min: 0 },
+    url: { type: String, required: true, trim: true },
+    metadata: { type: Schema.Types.Mixed },
   },
   { timestamps: true }
 );

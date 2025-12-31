@@ -1,3 +1,5 @@
+// UI component: Stat Card.
+
 import { Box, Flex, Heading, Text } from '@chakra-ui/react';
 import type { ReactNode } from 'react';
 

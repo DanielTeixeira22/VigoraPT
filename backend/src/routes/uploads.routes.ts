@@ -1,3 +1,5 @@
+// Express routes for uploads.
+
     
 import { Router } from 'express';
 import { upload } from '../middleware/uploadMiddleware';

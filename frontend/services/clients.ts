@@ -1,3 +1,5 @@
+// API service for Clients.
+
 import { api } from './httpClient';
 import type { ClientProfile } from '../types/domain';
 

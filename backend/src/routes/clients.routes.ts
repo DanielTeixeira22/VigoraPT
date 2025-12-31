@@ -10,7 +10,7 @@ const router = Router();
 
 router.use(auth);
 
-// CLIENTE
+// CLIENT
 router.get('/me', requireRole('CLIENT'), getMyProfile);
 router.put('/me', requireRole('CLIENT'), updateMyProfile);
 

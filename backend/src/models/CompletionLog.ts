@@ -1,7 +1,19 @@
+/**
+ * Model: Registo de Conclusão
+ * Regista se um treino foi realizado (DONE) ou falhado (MISSED).
+ * Único por cliente+sessão+data.
+ */
+
 import { Schema, model, Types, Model, HydratedDocument } from 'mongoose';
 
+// ============================================================================
+// Tipos
+// ============================================================================
+
+/** Completion status. */
 export type CompletionStatus = 'DONE' | 'MISSED';
 
+/** CompletionLog document. */
 export interface CompletionLog {
   clientId: Types.ObjectId;
   trainerId: Types.ObjectId;
@@ -16,6 +28,10 @@ export interface CompletionLog {
 }
 
 export type CompletionLogDocument = HydratedDocument<CompletionLog>;
+
+// ============================================================================
+// Schema
+// ============================================================================
 
 const CompletionLogSchema = new Schema<CompletionLog>(
   {
@@ -42,53 +58,40 @@ const CompletionLogSchema = new Schema<CompletionLog>(
       required: true,
       index: true,
     },
-    date: {
-      // Dia em que a sessão estava planeada/foi realizada (usar só a parte de data no frontend)
-      type: Date,
-      required: true,
-      index: true,
-    },
+    date: { type: Date, required: true, index: true },
     status: {
       type: String,
       enum: ['DONE', 'MISSED'],
       required: true,
       index: true,
     },
-    reason: {
-      // Motivo do não cumprimento (só faz sentido para MISSED)
-      type: String,
-      trim: true,
-    },
-    proofImage: {
-      // URL de imagem (ex.: foto pós-treino) se quiseres permitir "evidência"
-      type: String,
-    },
+    reason: { type: String, trim: true },
+    proofImage: { type: String },
   },
   { timestamps: true }
 );
 
-// Índices essenciais para dashboards e listagens
+// Indexes for dashboards.
 CompletionLogSchema.index({ clientId: 1, date: -1 });
 CompletionLogSchema.index({ trainerId: 1, date: -1 });
+CompletionLogSchema.index({ clientId: 1, sessionId: 1, date: 1 }, { unique: true });
 
-// (Opcional mas recomendado) Evita duplicados para o mesmo cliente/sessão/dia
-CompletionLogSchema.index(
-  { clientId: 1, sessionId: 1, date: 1 },
-  { unique: true }
-);
-
-// Limpeza simples: esvazia "reason" quando status = DONE
+// Limpa reason se DONE e normaliza data para UTC midnight
 CompletionLogSchema.pre('save', function (this: CompletionLog, next) {
-  if (this.status === 'DONE') this.reason = undefined;
-  // normaliza minutes/seconds para 00:00:00 (evita duplicados por hora)
+  if (this.status === 'DONE') {
+    this.reason = undefined;
+  }
   if (this.date instanceof Date) {
     const d = new Date(this.date);
-    d.setHours(0, 0, 0, 0);
+    d.setUTCHours(0, 0, 0, 0);
     this.date = d;
   }
   next();
 });
 
-const CompletionLogModel: Model<CompletionLog> = model<CompletionLog>('CompletionLog', CompletionLogSchema);
+const CompletionLogModel: Model<CompletionLog> = model<CompletionLog>(
+  'CompletionLog',
+  CompletionLogSchema
+);
 
 export default CompletionLogModel;
