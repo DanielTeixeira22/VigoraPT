@@ -383,10 +383,10 @@ const AuthPage = () => {
               <Box>
                 <Text fontWeight={700} color="brand.600" _dark={{ color: 'brand.300' }}>Login por QR Code</Text>
                 <Text fontSize="sm" color="muted">
-                  Escaneia o QR Code gerado no teu perfil.
+                  Utilize Scan para ler o QR Code criado no teu perfil.
                 </Text>
               </Box>
-              <Button colorScheme="brand" size="sm" onClick={openQrModal}>Escanear QR</Button>
+              <Button colorScheme="brand" size="sm" onClick={openQrModal}>Ler QR</Button>
             </Flex>
           </Box>
 
@@ -398,7 +398,7 @@ const AuthPage = () => {
               <ModalCloseButton />
               <ModalBody pb={6}>
                 <Text fontSize="sm" color="muted" mb={4}>
-                  Aponta a câmara para o QR Code gerado na página de perfil.
+                  Aponta a câmara para o QR Code criado na página de perfil.
                 </Text>
                 <Box 
                   id="qr-reader" 

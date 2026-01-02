@@ -404,7 +404,7 @@ const ProfilePage = () => {
                           Login via QR Code
                         </Text>
                         <Text fontSize="sm" color="gray.600" _dark={{ color: 'gray.400' }}>
-                          Gera um código para fazeres login noutro dispositivo
+                          Criar um código para fazeres login noutro dispositivo
                         </Text>
                       </Box>
                     </Flex>
@@ -429,7 +429,7 @@ const ProfilePage = () => {
                           }
                         }}
                       >
-                        Gerar QR Code
+                        Criar QR Code
                       </Button>
                     ) : (
                       <Flex direction="column" align="center">

@@ -255,7 +255,7 @@ const DashboardPage = () => {
         subtitle="KPIs rápidos, evolução semanal/mensal e alertas de treinos falhados."
         extra={
           <Stack direction="row" spacing={3} align="center">
-            <Text color="muted">Role atual: {user?.role}</Text>
+            <Text color="muted">{user?.role}</Text>
             {user?.role === 'TRAINER' && (
               <Select
                 size="sm"
