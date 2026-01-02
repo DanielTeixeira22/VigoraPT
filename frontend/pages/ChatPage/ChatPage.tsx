@@ -24,8 +24,7 @@ import { FiMessageCircle, FiSend, FiUsers, FiSearch } from 'react-icons/fi';
 import { listConversations, listMessages, sendMessage, ensureConversation } from '../../services/chat';
 import { listMyClients, getMyClientProfile } from '../../services/clients';
 import { getMyTrainerProfile, listPublicTrainers } from '../../services/trainers';
-import { searchUsers } from '../../services/users';
-import type { Conversation, Message, ClientProfile, User, UserProfile } from '../../types/domain';
+import type { Conversation, Message, ClientProfile, UserProfile } from '../../types/domain';
 import PageHeader from '../../components/ui/PageHeader';
 import { formatDateTime } from '../../utils/date';
 import { resolveBackendUrl } from '../../utils/url';
@@ -103,23 +102,7 @@ const ChatPage = () => {
     queryFn: () => listPublicTrainers({ limit: 50 }),
   });
 
-  const { data: adminUsers } = useQuery({
-    queryKey: ['users', 'admins', 'for-chat'],
-    enabled: user?.role === 'TRAINER',
-    queryFn: () => searchUsers({ role: 'ADMIN', limit: 50 }),
-  });
 
-  const { data: allTrainers } = useQuery({
-    queryKey: ['users', 'trainers', 'for-chat'],
-    enabled: user?.role === 'ADMIN',
-    queryFn: () => searchUsers({ role: 'TRAINER', limit: 100 }),
-  });
-
-  const { data: allClients } = useQuery({
-    queryKey: ['users', 'clients', 'for-chat'],
-    enabled: user?.role === 'ADMIN',
-    queryFn: () => searchUsers({ role: 'CLIENT', limit: 100 }),
-  });
 
   // Main user conversations.
   const { refetch: refetchConversations } = useQuery({
@@ -212,43 +195,12 @@ const ChatPage = () => {
           avatarUrl: getUserAvatar(c.userId as PopulatedUserRef),
         });
       });
-      (adminUsers?.data ?? []).forEach((u: User) => {
-        suggestions.push({
-          id: u._id || u.id || '',
-          name: `${u.profile.firstName ?? ''} ${u.profile.lastName ?? ''}`.trim() || u.username,
-          role: 'ADMIN' as const,
-          userId: u._id || u.id || '',
-          avatarUrl: resolveBackendUrl(u.profile.avatarUrl),
-        });
-      });
       return suggestions;
     }
 
-    if (user?.role === 'ADMIN') {
-      const suggestions: ContactSuggestion[] = [];
-      (allTrainers?.data ?? []).forEach((u: User) => {
-        suggestions.push({
-          id: u._id || u.id || '',
-          name: `${u.profile.firstName ?? ''} ${u.profile.lastName ?? ''}`.trim() || u.username,
-          role: 'TRAINER' as const,
-          userId: u._id || u.id || '',
-          avatarUrl: resolveBackendUrl(u.profile.avatarUrl),
-        });
-      });
-      (allClients?.data ?? []).forEach((u: User) => {
-        suggestions.push({
-          id: u._id || u.id || '',
-          name: `${u.profile.firstName ?? ''} ${u.profile.lastName ?? ''}`.trim() || u.username,
-          role: 'CLIENT' as const,
-          userId: u._id || u.id || '',
-          avatarUrl: resolveBackendUrl(u.profile.avatarUrl),
-        });
-      });
-      return suggestions;
-    }
 
     return [];
-  }, [user?.role, clientProfile, publicTrainers, myClients, adminUsers, allTrainers, allClients]);
+  }, [user?.role, clientProfile, publicTrainers, myClients]);
 
   // Filter suggestions by search term.
   const filteredSuggestions = useMemo(() => {
@@ -279,12 +231,6 @@ const ChatPage = () => {
       });
       return;
     }
-
-    toast({
-      title: 'Funcionalidade em desenvolvimento',
-      description: 'Chat com admins será disponibilizado em breve.',
-      status: 'info',
-    });
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {

@@ -20,7 +20,7 @@ const navItems: NavItem[] = [
   { label: 'Planos', to: '/plans', icon: FiBarChart2, roles: ['TRAINER'] },
   { label: 'Clientes', to: '/clients', icon: FiUsers, roles: ['TRAINER'] },
   { label: 'Treinadores', to: '/trainers', icon: FiActivity },
-  { label: 'Chat', to: '/chat', icon: FiMessageCircle },
+  { label: 'Chat', to: '/chat', icon: FiMessageCircle, roles: ['CLIENT', 'TRAINER'] },
   { label: 'Perfil', to: '/profile', icon: FiSettings },
   { label: 'Admin', to: '/admin', icon: MdOutlineAdminPanelSettings, roles: ['ADMIN'] },
 ];
