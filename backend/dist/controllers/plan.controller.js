@@ -515,6 +515,7 @@ exports.listCompletion = listCompletion;
  * @throws {HttpError} 400 if required fields missing or invalid status
  */
 const upsertCompletion = async (req, res, next) => {
+    var _a;
     try {
         const payload = req.body;
         validateCompletionPayload(payload);
@@ -528,9 +529,17 @@ const upsertCompletion = async (req, res, next) => {
             proofImage: proofImage || undefined,
         };
         const completionLog = await CompletionLog_1.default.findOneAndUpdate({ clientId, sessionId, date: normalizedDate, planId, trainerId }, { $set: update }, { upsert: true, new: true, setDefaultsOnInsert: true });
+        // Get client name for notification
+        const clientProfile = await ClientProfile_1.default.findById(clientId)
+            .populate('userId', 'username profile.firstName profile.lastName');
+        const clientUser = clientProfile === null || clientProfile === void 0 ? void 0 : clientProfile.userId;
+        const clientName = ((_a = clientUser === null || clientUser === void 0 ? void 0 : clientUser.profile) === null || _a === void 0 ? void 0 : _a.firstName)
+            ? `${clientUser.profile.firstName}${clientUser.profile.lastName ? ` ${clientUser.profile.lastName}` : ''}`
+            : (clientUser === null || clientUser === void 0 ? void 0 : clientUser.username) || 'Cliente';
         // Notify trainer
         await notifyTrainerOfCompletion(trainerId, status, {
             clientId,
+            clientName,
             planId,
             sessionId,
             date: normalizedDate,

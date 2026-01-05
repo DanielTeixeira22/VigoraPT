@@ -83,7 +83,7 @@ const ProfilePage = () => {
   const { data: trainerOptions } = useQuery({
     queryKey: ['trainers', 'public', 'for-change'],
     enabled: user?.role === 'CLIENT',
-    queryFn: () => listPublicTrainers({ limit: 50, sort: 'rating' }),
+    queryFn: () => listPublicTrainers({ limit: 50, sort: 'clients_desc' }),
   });
 
   const { data: pendingRequest, refetch: refetchPendingRequest } = useQuery({
@@ -415,21 +415,21 @@ const ProfilePage = () => {
                         colorScheme="brand"
                         size="lg"
                         isLoading={qrLoading}
-                        loadingText="A gerar..."
+                        loadingText="A criar..."
                         onClick={async () => {
                           setQrLoading(true);
                           try {
                             const res = await qrGenerate();
                             setQrToken(res);
-                            toast({ title: 'QR Code gerado!', description: 'Escaneia com a câmara na página de login.', status: 'success' });
+                            toast({ title: 'QR Code criado!', description: 'Lê com a câmara na página de login.', status: 'success' });
                           } catch {
-                            toast({ title: 'Erro ao gerar QR', description: 'Tenta novamente.', status: 'error' });
+                            toast({ title: 'Erro ao criar QR', description: 'Tenta novamente.', status: 'error' });
                           } finally {
                             setQrLoading(false);
                           }
                         }}
                       >
-                        Gerar QR Code
+                        Criar QR Code
                       </Button>
                     ) : (
                       <Flex direction="column" align="center">
@@ -462,20 +462,21 @@ const ProfilePage = () => {
                           variant="outline"
                           colorScheme="brand"
                           isLoading={qrLoading}
+                          leftIcon={<Icon as={FiRefreshCw} />}
                           onClick={async () => {
                             setQrLoading(true);
                             try {
                               const res = await qrGenerate();
                               setQrToken(res);
-                              toast({ title: 'Novo QR Code gerado!', status: 'success' });
+                              toast({ title: 'Novo QR Code criado!', status: 'success' });
                             } catch {
-                              toast({ title: 'Erro ao gerar QR', status: 'error' });
+                              toast({ title: 'Erro ao criar QR', status: 'error' });
                             } finally {
                               setQrLoading(false);
                             }
                           }}
                         >
-                          🔄 Regenerar QR Code
+                          Recriar QR Code
                         </Button>
                       </Flex>
                     )}

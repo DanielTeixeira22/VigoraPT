@@ -685,9 +685,19 @@ export const upsertCompletion = async (
       { upsert: true, new: true, setDefaultsOnInsert: true }
     );
 
+    // Get client name for notification
+    const clientProfile = await ClientProfile.findById(clientId)
+      .populate<{ userId: { username?: string; profile?: { firstName?: string; lastName?: string } } }>('userId', 'username profile.firstName profile.lastName');
+
+    const clientUser = clientProfile?.userId;
+    const clientName = clientUser?.profile?.firstName
+      ? `${clientUser.profile.firstName}${clientUser.profile.lastName ? ` ${clientUser.profile.lastName}` : ''}`
+      : clientUser?.username || 'Cliente';
+
     // Notify trainer
     await notifyTrainerOfCompletion(trainerId, status, {
       clientId,
+      clientName,
       planId,
       sessionId,
       date: normalizedDate,

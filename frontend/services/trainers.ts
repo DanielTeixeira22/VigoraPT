@@ -36,7 +36,7 @@ export const adminUpdateTrainer = async (id: string, payload: Partial<Pick<Train
   return data;
 };
 
-export const listPublicTrainers = async (params?: { q?: string; page?: number; limit?: number; sort?: 'newest' | 'rating' }) => {
+export const listPublicTrainers = async (params?: { q?: string; page?: number; limit?: number; sort?: 'name_asc' | 'name_desc' | 'clients_asc' | 'clients_desc' }) => {
   const { data } = await api.get<{ items: TrainerProfile[]; page: number; total: number; pages: number }>('/trainers/public', { params });
   return data;
 };

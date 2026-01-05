@@ -40,12 +40,28 @@ const formatNotificationTime = (date?: string) => {
 
 const getNotificationMessage = (n: Notification): { title: string; subtitle?: string } => {
   switch (n.type) {
-    case 'NEW_MESSAGE':
-      return { title: 'Nova mensagem', subtitle: n.payload?.preview ? String(n.payload.preview) : 'Tens uma nova mensagem no chat' };
-    case 'MISSED_WORKOUT':
-      return { title: 'Treino perdido', subtitle: 'Um cliente faltou ao treino' };
-    case 'WORKOUT_DONE':
-      return { title: 'Treino concluído', subtitle: 'Um cliente completou o treino' };
+    case 'NEW_MESSAGE': {
+      const senderName = n.payload?.senderName as string | undefined;
+      const preview = n.payload?.preview ? String(n.payload.preview) : undefined;
+      return { 
+        title: senderName ? `Mensagem de ${senderName}` : 'Nova mensagem', 
+        subtitle: preview || 'Tens uma nova mensagem no chat' 
+      };
+    }
+    case 'MISSED_WORKOUT': {
+      const clientName = n.payload?.clientName as string | undefined;
+      return { 
+        title: 'Treino perdido', 
+        subtitle: clientName ? `${clientName} faltou ao treino` : 'Um cliente faltou ao treino' 
+      };
+    }
+    case 'WORKOUT_DONE': {
+      const clientName = n.payload?.clientName as string | undefined;
+      return { 
+        title: 'Treino concluído', 
+        subtitle: clientName ? `${clientName} completou o treino` : 'Um cliente completou o treino' 
+      };
+    }
     case 'NEW_PLAN': {
       const title = n.payload?.title as string | undefined;
       return { title: 'Novo plano de treino', subtitle: title ? `O teu treinador criou: ${title}` : 'Foi criado um novo plano para ti' };
@@ -279,7 +295,9 @@ const Topbar = () => {
           </MenuButton>
           <MenuList>
             <MenuItem onClick={() => (window.location.href = '/profile')}>Perfil</MenuItem>
-            <MenuItem onClick={() => (window.location.href = '/chat')}>Chat</MenuItem>
+            {user?.role !== 'ADMIN' && (
+              <MenuItem onClick={() => (window.location.href = '/chat')}>Chat</MenuItem>
+            )}
             <MenuItem icon={<FiLogOut />} onClick={logout}>
               Terminar sessão
             </MenuItem>

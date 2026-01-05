@@ -184,6 +184,7 @@ exports.listMessages = listMessages;
  * @throws {HttpError} 401 if not authenticated
  */
 const sendMessage = async (req, res, next) => {
+    var _a, _b, _c;
     try {
         requireAuth(req);
         const { id: conversationId } = req.params;
@@ -204,12 +205,17 @@ const sendMessage = async (req, res, next) => {
         if (conversation) {
             const recipientId = conversation.participants.find((p) => String(p) !== String(req.user._id));
             if (recipientId) {
+                // Get sender name for notification
+                const senderName = ((_b = (_a = req.user) === null || _a === void 0 ? void 0 : _a.profile) === null || _b === void 0 ? void 0 : _b.firstName)
+                    ? `${req.user.profile.firstName}${req.user.profile.lastName ? ` ${req.user.profile.lastName}` : ''}`
+                    : ((_c = req.user) === null || _c === void 0 ? void 0 : _c.username) || 'Utilizador';
                 const notification = await Notification_1.default.create({
                     recipientId,
                     type: 'NEW_MESSAGE',
                     payload: {
                         conversationId,
                         senderId: req.user._id,
+                        senderName,
                         preview: content.slice(0, 50),
                     },
                     isRead: false,

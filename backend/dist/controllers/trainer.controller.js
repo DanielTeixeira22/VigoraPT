@@ -282,7 +282,7 @@ exports.adminUpdateTrainer = adminUpdateTrainer;
 // ============================================================================
 /**
  * Lists approved trainers for public directory.
- * Supports search by certification and specialties, pagination, and sorting.
+ * Supports search by trainer name, pagination, and sorting by name or clients.
  *
  * @route GET /api/trainers/public
  * @access Public
@@ -294,35 +294,119 @@ exports.adminUpdateTrainer = adminUpdateTrainer;
  * @returns {PaginatedResponse<TrainerProfile>} Paginated list of approved trainers
  */
 const listPublicTrainers = async (req, res, next) => {
+    var _a, _b;
     try {
-        const { page = '1', limit = '12', sort = 'newest', q, } = req.query;
+        const { page = '1', limit = '6', sort = 'name_asc', q, } = req.query;
         const parsedPage = Math.max(1, Number.parseInt(page, 10) || 1);
-        const parsedLimit = Math.min(50, Math.max(1, Number.parseInt(limit, 10) || 12));
+        const parsedLimit = Math.min(50, Math.max(1, Number.parseInt(limit, 10) || 6));
         const skip = (parsedPage - 1) * parsedLimit;
         // Only show approved trainers
-        const filter = {
+        const matchStage = {
             reviewStatus: 'APPROVED',
             validatedByAdmin: true,
         };
-        // Search by certification or specialties.
+        // Build aggregation pipeline
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const pipeline = [
+            // Match approved trainers
+            { $match: matchStage },
+            // Lookup user information for name search and display
+            {
+                $lookup: {
+                    from: 'users',
+                    localField: 'userId',
+                    foreignField: '_id',
+                    as: 'user',
+                },
+            },
+            { $unwind: { path: '$user', preserveNullAndEmptyArrays: true } },
+            // Lookup client count
+            {
+                $lookup: {
+                    from: 'clientprofiles',
+                    localField: '_id',
+                    foreignField: 'trainerId',
+                    as: 'clients',
+                },
+            },
+            // Add computed fields
+            {
+                $addFields: {
+                    clientCount: { $size: '$clients' },
+                    trainerName: {
+                        $concat: [
+                            { $ifNull: ['$user.profile.firstName', ''] },
+                            ' ',
+                            { $ifNull: ['$user.profile.lastName', ''] },
+                        ],
+                    },
+                },
+            },
+        ];
+        // Search by trainer name
         if (q) {
             const searchRegex = new RegExp(q, 'i');
-            filter.$or = [
-                { certification: searchRegex },
-                { specialties: searchRegex },
-            ];
+            pipeline.push({
+                $match: {
+                    $or: [
+                        { 'user.profile.firstName': searchRegex },
+                        { 'user.profile.lastName': searchRegex },
+                        { 'user.username': searchRegex },
+                    ],
+                },
+            });
         }
-        const sortOption = sort === 'rating'
-            ? { rating: -1, createdAt: -1 }
-            : { createdAt: -1 };
-        const [items, total] = await Promise.all([
-            TrainerProfile_1.default.find(filter)
-                .populate('userId', 'username profile.firstName profile.lastName profile.avatarUrl')
-                .sort(sortOption)
-                .skip(skip)
-                .limit(parsedLimit),
-            TrainerProfile_1.default.countDocuments(filter),
-        ]);
+        // Sorting
+        let sortStage;
+        switch (sort) {
+            case 'name_desc':
+                sortStage = { trainerName: -1, createdAt: -1 };
+                break;
+            case 'clients_asc':
+                sortStage = { clientCount: 1, createdAt: -1 };
+                break;
+            case 'clients_desc':
+                sortStage = { clientCount: -1, createdAt: -1 };
+                break;
+            case 'name_asc':
+            default:
+                sortStage = { trainerName: 1, createdAt: -1 };
+                break;
+        }
+        // Count total before pagination
+        const countPipeline = [...pipeline, { $count: 'total' }];
+        const countResult = await TrainerProfile_1.default.aggregate(countPipeline);
+        const total = (_b = (_a = countResult[0]) === null || _a === void 0 ? void 0 : _a.total) !== null && _b !== void 0 ? _b : 0;
+        // Add sorting, pagination, and format output
+        pipeline.push({ $sort: sortStage }, { $skip: skip }, { $limit: parsedLimit }, 
+        // Reshape to match expected format
+        {
+            $project: {
+                _id: 1,
+                userId: {
+                    _id: '$user._id',
+                    username: '$user.username',
+                    profile: {
+                        firstName: '$user.profile.firstName',
+                        lastName: '$user.profile.lastName',
+                        avatarUrl: '$user.profile.avatarUrl',
+                    },
+                },
+                certification: 1,
+                specialties: 1,
+                avatarUrl: 1,
+                documentUrls: 1,
+                validatedByAdmin: 1,
+                validatedAt: 1,
+                reviewStatus: 1,
+                rating: 1,
+                hourlyRate: 1,
+                createdAt: 1,
+                updatedAt: 1,
+                clientCount: 1,
+            },
+        });
+        const items = await TrainerProfile_1.default.aggregate(pipeline);
         res.json({
             items,
             page: parsedPage,

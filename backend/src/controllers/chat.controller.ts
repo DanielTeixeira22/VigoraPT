@@ -267,12 +267,18 @@ export const sendMessage = async (
       );
 
       if (recipientId) {
+        // Get sender name for notification
+        const senderName = req.user?.profile?.firstName
+          ? `${req.user.profile.firstName}${req.user.profile.lastName ? ` ${req.user.profile.lastName}` : ''}`
+          : req.user?.username || 'Utilizador';
+
         const notification = await Notification.create({
           recipientId,
           type: 'NEW_MESSAGE',
           payload: {
             conversationId,
             senderId: req.user!._id,
+            senderName,
             preview: content.slice(0, 50),
           },
           isRead: false,

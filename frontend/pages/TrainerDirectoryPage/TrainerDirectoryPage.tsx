@@ -4,17 +4,19 @@ import {
   Box,
   Button,
   Flex,
-  Grid,
-  GridItem,
   HStack,
   Icon,
   Input,
   InputGroup,
   InputLeftElement,
   Select,
-  Stack,
+  Table,
+  Thead,
+  Tbody,
+  Tr,
+  Th,
+  Td,
   Text,
-  VStack,
 } from '@chakra-ui/react';
 import { useQuery } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
@@ -49,23 +51,16 @@ const getTrainerAvatar = (t: TrainerProfile) => {
 
 const TrainerDirectoryPage = () => {
   const [search, setSearch] = useState('');
-  const [sort, setSort] = useState<'rating' | 'newest'>('newest');
+  const [sort, setSort] = useState<'name_asc' | 'name_desc' | 'clients_asc' | 'clients_desc'>('name_asc');
   const [page, setPage] = useState(1);
-  const limit = 9;
+  const [limit, setLimit] = useState(6);
 
   const { data, isFetching } = useQuery({
-    queryKey: ['trainers', 'public', search, sort, page],
+    queryKey: ['trainers', 'public', search, sort, page, limit],
     queryFn: () => listPublicTrainers({ q: search || undefined, sort, page, limit }),
   });
 
   const items = useMemo(() => data?.items ?? [], [data]);
-
-  const filtered = useMemo(() => {
-    const list = items;
-    if (!search) return list;
-    const term = search.toLowerCase();
-    return list.filter((t: TrainerProfile) => (t.specialties ?? []).some((s: string) => s.toLowerCase().includes(term)) || t.certification?.toLowerCase().includes(term));
-  }, [items, search]);
 
   return (
     <Box>
@@ -94,7 +89,7 @@ const TrainerDirectoryPage = () => {
               <Icon as={FiSearch} color="gray.400" />
             </InputLeftElement>
             <Input 
-              placeholder="Pesquisar por especialidade..." 
+              placeholder="Pesquisar por nome..." 
               value={search} 
               onChange={(e) => setSearch(e.target.value)}
               borderRadius="12px"
@@ -106,14 +101,28 @@ const TrainerDirectoryPage = () => {
           <HStack spacing={4}>
             <Select 
               value={sort} 
-              onChange={(e) => setSort(e.target.value as 'rating' | 'newest')} 
-              w="180px"
+              onChange={(e) => setSort(e.target.value as 'name_asc' | 'name_desc' | 'clients_asc' | 'clients_desc')} 
+              w="200px"
               borderRadius="12px"
               bg="white"
               _dark={{ bg: 'gray.800' }}
             >
-              <option value="newest">Mais recentes</option>
-              <option value="rating">Melhor avaliação</option>
+              <option value="name_asc">Nome (A-Z)</option>
+              <option value="name_desc">Nome (Z-A)</option>
+              <option value="clients_desc">Nº Clientes (↓)</option>
+              <option value="clients_asc">Nº Clientes (↑)</option>
+            </Select>
+            
+            <Select 
+              value={limit} 
+              onChange={(e) => { setLimit(Number(e.target.value)); setPage(1); }} 
+              w="100px"
+              borderRadius="12px"
+              bg="white"
+              _dark={{ bg: 'gray.800' }}
+            >
+              <option value={3}>3</option>
+              <option value={6}>6</option>
             </Select>
             
             <HStack>
@@ -145,109 +154,112 @@ const TrainerDirectoryPage = () => {
         </Flex>
       </Box>
 
-      {/* Trainers Grid */}
-      <Grid templateColumns={{ base: '1fr', md: 'repeat(2, 1fr)', lg: 'repeat(3, 1fr)' }} gap={5}>
-        {filtered.map((t: TrainerProfile) => (
-          <GridItem key={t._id}>
-            <Box
-              bg="card"
-              border="1px solid"
-              borderColor="border"
-              borderRadius="16px"
-              p={5}
-              transition="all 0.3s"
-              _hover={{
-                transform: 'translateY(-4px)',
-                boxShadow: 'xl',
-                borderColor: 'brand.200',
-              }}
-              cursor="pointer"
-            >
-              {/* Header with avatar and status */}
-              <Flex gap={4} mb={4}>
-                <Avatar
-                  size="lg"
-                  name={getTrainerName(t)}
-                  src={getTrainerAvatar(t)}
-                  bg="brand.100"
-                  color="brand.600"
-                />
-                <VStack align="flex-start" spacing={1} flex={1}>
-                  <Flex justify="space-between" w="100%" align="center">
-                    <Text fontWeight={700} fontSize="lg">
-                      {getTrainerName(t)}
-                    </Text>
-                    <Badge 
-                      colorScheme={t.validatedByAdmin ? 'green' : 'yellow'} 
-                      borderRadius="full"
-                      px={2}
-                      fontSize="xs"
-                    >
-                      {t.validatedByAdmin ? '✓ Verificado' : 'Pendente'}
-                    </Badge>
-                  </Flex>
-                </VStack>
-              </Flex>
-
-              {/* Certification */}
-              <HStack spacing={2} mb={3} color="gray.600" _dark={{ color: 'gray.400' }}>
-                <Icon as={FiAward} boxSize={4} />
-                <Text fontSize="sm" noOfLines={1}>
-                  {t.certification || 'Certificação não especificada'}
-                </Text>
-              </HStack>
-
-              {/* Specialties */}
-              <Stack direction="row" spacing={2} wrap="wrap" mb={4}>
-                {(t.specialties ?? []).slice(0, 3).map((s) => (
-                  <Badge 
-                    key={s} 
-                    colorScheme="brand" 
-                    variant="subtle"
-                    borderRadius="full"
-                    px={3}
-                    py={1}
-                    fontSize="xs"
-                    textTransform="capitalize"
-                  >
-                    {s}
-                  </Badge>
-                ))}
-                {(t.specialties?.length ?? 0) > 3 && (
-                  <Badge variant="outline" borderRadius="full" px={2} fontSize="xs">
-                    +{(t.specialties?.length ?? 0) - 3}
-                  </Badge>
-                )}
-                {(t.specialties?.length ?? 0) === 0 && (
-                  <Text fontSize="sm" color="gray.400" fontStyle="italic">
-                    Sem especialidades
-                  </Text>
-                )}
-              </Stack>
-
-              {/* Price */}
-              <Flex 
-                justify="space-between" 
-                align="center" 
-                pt={3} 
-                borderTop="1px solid" 
-                borderColor="border"
+      {/* Trainers Table */}
+      <Box
+        bg="card"
+        border="1px solid"
+        borderColor="border"
+        borderRadius="16px"
+        overflow="hidden"
+      >
+        <Table variant="simple">
+          <Thead bg="gray.50" _dark={{ bg: 'gray.800' }}>
+            <Tr>
+              <Th>Treinador</Th>
+              <Th>Certificação</Th>
+              <Th>Especialidades</Th>
+              <Th>Estado</Th>
+              <Th isNumeric>Nº Clientes</Th>
+            </Tr>
+          </Thead>
+          <Tbody>
+            {items.map((t: TrainerProfile) => (
+              <Tr
+                key={t._id}
+                _hover={{ bg: 'gray.50', _dark: { bg: 'gray.700' } }}
+                cursor="pointer"
+                transition="background 0.2s"
               >
-                <HStack spacing={2} color="gray.500">
-                  <Text fontSize="lg">€</Text>
-                  <Text fontSize="sm">Preço/hora</Text>
-                </HStack>
-                <Text fontWeight={700} fontSize="lg" color="brand.500">
-                  {t.hourlyRate ? `${t.hourlyRate}€` : 'A consultar'}
-                </Text>
-              </Flex>
-            </Box>
-          </GridItem>
-        ))}
-      </Grid>
+                {/* Trainer Name & Avatar */}
+                <Td>
+                  <HStack spacing={3}>
+                    <Avatar
+                      size="sm"
+                      name={getTrainerName(t)}
+                      src={getTrainerAvatar(t)}
+                      bg="brand.100"
+                      color="brand.600"
+                    />
+                    <Text fontWeight={600}>{getTrainerName(t)}</Text>
+                  </HStack>
+                </Td>
+
+                {/* Certification */}
+                <Td>
+                  <HStack spacing={2} color="gray.600" _dark={{ color: 'gray.400' }}>
+                    <Icon as={FiAward} boxSize={4} />
+                    <Text fontSize="sm" noOfLines={1}>
+                      {t.certification || 'Não especificada'}
+                    </Text>
+                  </HStack>
+                </Td>
+
+                {/* Specialties */}
+                <Td>
+                  <HStack spacing={2} wrap="wrap">
+                    {(t.specialties ?? []).slice(0, 2).map((s) => (
+                      <Badge
+                        key={s}
+                        colorScheme="brand"
+                        variant="subtle"
+                        borderRadius="full"
+                        px={2}
+                        py={0.5}
+                        fontSize="xs"
+                        textTransform="capitalize"
+                      >
+                        {s}
+                      </Badge>
+                    ))}
+                    {(t.specialties?.length ?? 0) > 2 && (
+                      <Badge variant="outline" borderRadius="full" px={2} fontSize="xs">
+                        +{(t.specialties?.length ?? 0) - 2}
+                      </Badge>
+                    )}
+                    {(t.specialties?.length ?? 0) === 0 && (
+                      <Text fontSize="sm" color="gray.400" fontStyle="italic">
+                        —
+                      </Text>
+                    )}
+                  </HStack>
+                </Td>
+
+                {/* Status */}
+                <Td>
+                  <Badge
+                    colorScheme={t.validatedByAdmin ? 'green' : 'yellow'}
+                    borderRadius="full"
+                    px={2}
+                    fontSize="xs"
+                  >
+                    {t.validatedByAdmin ? '✓ Verificado' : 'Pendente'}
+                  </Badge>
+                </Td>
+
+                {/* Client Count */}
+                <Td isNumeric>
+                  <Text fontWeight={700} color="brand.500">
+                    {(t as TrainerProfile & { clientCount?: number }).clientCount ?? 0}
+                  </Text>
+                </Td>
+              </Tr>
+            ))}
+          </Tbody>
+        </Table>
+      </Box>
 
       {/* Empty state */}
-      {filtered.length === 0 && (
+      {items.length === 0 && (
         <Flex 
           direction="column" 
           align="center" 
