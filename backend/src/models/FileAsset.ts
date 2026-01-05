@@ -21,6 +21,7 @@ export interface FileAsset {
   mimeType: string;
   size: number;
   url: string;
+  cloudinaryId?: string;
   metadata?: Record<string, unknown>;
   createdAt: Date;
   updatedAt: Date;
@@ -45,6 +46,7 @@ const FileAssetSchema = new Schema<FileAsset>(
     mimeType: { type: String, required: true, trim: true },
     size: { type: Number, required: true, min: 0 },
     url: { type: String, required: true, trim: true },
+    cloudinaryId: { type: String, trim: true },
     metadata: { type: Schema.Types.Mixed },
   },
   { timestamps: true }

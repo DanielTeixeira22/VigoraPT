@@ -2,7 +2,7 @@
  * Upload Controller
  * 
  * Handles file upload and asset management including:
- * - Single file uploads
+ * - Single file uploads (Cloudinary in production, local in development)
  * - Listing user assets
  * - Deleting assets (owner or admin)
  * 
@@ -14,6 +14,7 @@ import fs from 'fs/promises';
 import { Request, Response, NextFunction } from 'express';
 import createError from 'http-errors';
 import FileAsset from '../models/FileAsset';
+import { uploadFileToCloudinary, isCloudinaryAvailable, deleteFromCloudinary } from '../services/cloudinary.service';
 
 // ============================================================================
 // Types & Interfaces
@@ -38,7 +39,7 @@ interface PaginatedResponse<T> {
 // ============================================================================
 
 /**
- * Generates a public URL for an uploaded file.
+ * Generates a public URL for an uploaded file (local storage).
  * 
  * @param req - Express request object
  * @param filename - The filename to generate URL for
@@ -82,6 +83,7 @@ const parseMetadata = (metadata?: string): Record<string, unknown> | undefined =
 
 /**
  * Uploads a single file and creates an asset record.
+ * Uses Cloudinary in production, local disk storage in development.
  * 
  * @route POST /api/upload
  * @access Private (optional - can work without auth)
@@ -107,13 +109,38 @@ export const uploadSingle = async (
     const { purpose = 'OTHER', metadata } = req.body as UploadPayload;
     const ownerId = req.user?._id;
 
+    let fileUrl: string;
+    let cloudinaryId: string | undefined;
+
+    // Use Cloudinary in production, local storage in development
+    if (isCloudinaryAvailable()) {
+      try {
+        const cloudResult = await uploadFileToCloudinary(file.path, {
+          folder: `vigorapt/${purpose.toLowerCase()}`,
+        });
+        fileUrl = cloudResult.secure_url;
+        cloudinaryId = cloudResult.public_id;
+
+        // Delete local temp file after successful cloud upload
+        await fs.unlink(file.path).catch(() => null);
+      } catch (cloudError) {
+        console.error('[uploadSingle] Cloudinary upload failed:', cloudError);
+        // Fallback to local URL if Cloudinary fails
+        fileUrl = getFilePublicUrl(req, file.filename);
+      }
+    } else {
+      // Local storage
+      fileUrl = getFilePublicUrl(req, file.filename);
+    }
+
     const asset = await FileAsset.create({
       ...(ownerId ? { ownerId } : {}),
       purpose,
       filename: file.filename,
       mimeType: file.mimetype,
       size: file.size,
-      url: getFilePublicUrl(req, file.filename),
+      url: fileUrl,
+      cloudinaryId,
       metadata: parseMetadata(metadata),
     });
 

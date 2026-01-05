@@ -21,6 +21,7 @@ const FileAssetSchema = new mongoose_1.Schema({
     mimeType: { type: String, required: true, trim: true },
     size: { type: Number, required: true, min: 0 },
     url: { type: String, required: true, trim: true },
+    cloudinaryId: { type: String, trim: true },
     metadata: { type: mongoose_1.Schema.Types.Mixed },
 }, { timestamps: true });
 FileAssetSchema.index({ createdAt: -1 });
