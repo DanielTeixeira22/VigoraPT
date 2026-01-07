@@ -4,8 +4,15 @@ import {
   Box,
   Button,
   Divider,
+  Drawer,
+  DrawerBody,
+  DrawerCloseButton,
+  DrawerContent,
+  DrawerHeader,
+  DrawerOverlay,
   Flex,
   HStack,
+  Icon,
   IconButton,
   Menu,
   MenuButton,
@@ -14,10 +21,14 @@ import {
   Spacer,
   Text,
   Tooltip,
+  useDisclosure,
+  VStack,
 } from '@chakra-ui/react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
-import { FiBell, FiCheck, FiExternalLink, FiLogOut, FiMoon, FiSun, FiUser } from 'react-icons/fi';
+import { FiBell, FiCheck, FiExternalLink, FiLogOut, FiMenu, FiMoon, FiSun, FiUser, FiHome, FiCalendar, FiBarChart2, FiUsers, FiActivity, FiMessageCircle, FiSettings } from 'react-icons/fi';
+import { MdOutlineAdminPanelSettings } from 'react-icons/md';
+import { NavLink } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useSocket } from '../../context/SocketContext';
 import { useThemeMode } from '../../context/ThemeContext';
@@ -97,6 +108,25 @@ const Topbar = () => {
   const { theme, toggleTheme } = useThemeMode();
   const { socket } = useSocket();
   const qc = useQueryClient();
+  const { isOpen: isDrawerOpen, onOpen: openDrawer, onClose: closeDrawer } = useDisclosure();
+
+  // Mobile nav items (same as SidebarNav)
+  const mobileNavItems = [
+    { label: 'Dashboard', to: '/dashboard', icon: FiHome },
+    { label: 'Calendário', to: '/trainings', icon: FiCalendar, roles: ['CLIENT'] },
+    { label: 'Planos', to: '/plans', icon: FiBarChart2, roles: ['TRAINER'] },
+    { label: 'Clientes', to: '/clients', icon: FiUsers, roles: ['TRAINER'] },
+    { label: 'Treinadores', to: '/trainers', icon: FiActivity },
+    { label: 'Chat', to: '/chat', icon: FiMessageCircle, roles: ['CLIENT', 'TRAINER'] },
+    { label: 'Perfil', to: '/profile', icon: FiSettings },
+    { label: 'Admin', to: '/admin', icon: MdOutlineAdminPanelSettings, roles: ['ADMIN'] },
+  ];
+
+  const canSee = (item: { roles?: string[] }) => {
+    if (!item.roles) return true;
+    if (!user) return false;
+    return item.roles.includes(user.role);
+  };
 
   // Listen for real-time notifications via WebSocket
   useEffect(() => {
@@ -138,6 +168,7 @@ const Topbar = () => {
   const unreadCount = notifications.filter((n) => !n.isRead).length;
 
   return (
+    <>
     <Flex
       as="header"
       align="center"
@@ -152,10 +183,19 @@ const Topbar = () => {
       position="relative"
       zIndex="sticky"
     >
-      <Text fontWeight={700} letterSpacing="widest">
+      {/* Hamburger menu - mobile only */}
+      <IconButton
+        aria-label="Menu"
+        icon={<FiMenu />}
+        variant="ghost"
+        display={{ base: 'flex', md: 'none' }}
+        onClick={openDrawer}
+      />
+
+      <Text fontWeight={700} letterSpacing="widest" fontSize={{ base: 'sm', md: 'md' }}>
         {user ? `Olá, ${user.profile.firstName}!` : 'Vigora PT'}
       </Text>
-      <Badge colorScheme="brand" borderRadius="full">
+      <Badge colorScheme="brand" borderRadius="full" display={{ base: 'none', sm: 'flex' }}>
         {user?.role ?? 'GUEST'}
       </Badge>
 
@@ -309,9 +349,55 @@ const Topbar = () => {
           name={`${user?.profile.firstName ?? ''} ${user?.profile.lastName ?? ''}`}
           src={user?.profile.avatarUrl}
           ml={2}
+          display={{ base: 'none', sm: 'flex' }}
         />
       </HStack>
     </Flex>
+
+    {/* Mobile Navigation Drawer */}
+    <Drawer isOpen={isDrawerOpen} placement="left" onClose={closeDrawer}>
+      <DrawerOverlay />
+      <DrawerContent bg="rgba(14,18,27,0.95)" color="white">
+        <DrawerCloseButton />
+        <DrawerHeader borderBottomWidth="1px" borderColor="rgba(255,255,255,0.1)">
+          Vigora PT
+        </DrawerHeader>
+        <DrawerBody>
+          <VStack align="stretch" spacing={2} mt={4}>
+            {mobileNavItems.filter(canSee).map((item) => (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                onClick={closeDrawer}
+                style={({ isActive }) => ({
+                  textDecoration: 'none',
+                  color: isActive ? '#0f172a' : 'white',
+                })}
+              >
+                {({ isActive }) => (
+                  <Flex
+                    align="center"
+                    gap={3}
+                    px={3}
+                    py={3}
+                    borderRadius="12px"
+                    bg={isActive ? 'white' : 'transparent'}
+                    boxShadow={isActive ? 'lg' : 'none'}
+                    color={isActive ? 'brand.600' : 'white'}
+                    _hover={{ bg: isActive ? 'white' : 'rgba(255,255,255,0.06)' }}
+                    transition="all 0.15s ease"
+                  >
+                    <Icon as={item.icon} />
+                    <Text fontWeight={600}>{item.label}</Text>
+                  </Flex>
+                )}
+              </NavLink>
+            ))}
+          </VStack>
+        </DrawerBody>
+      </DrawerContent>
+    </Drawer>
+    </>
   );
 };
 

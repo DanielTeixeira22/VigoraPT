@@ -37,6 +37,7 @@ const SidebarNav = () => {
   return (
     <Box
       as="aside"
+      display={{ base: 'none', md: 'block' }}
       w={{ base: '220px', lg: '250px' }}
       bg="rgba(14,18,27,0.9)"
       color="white"

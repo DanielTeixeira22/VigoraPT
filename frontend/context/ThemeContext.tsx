@@ -1,5 +1,3 @@
-// Context provider for Theme Context.
-
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
 import { useColorMode } from '@chakra-ui/react';
 
